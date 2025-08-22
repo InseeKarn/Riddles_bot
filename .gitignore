@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Virtual environment
+venv/
+env/
+
+# Credentials & tokens
+credentials.json
+token.json
+.env
+
+# VSCode / IDE
+.vscode/
+.idea/
+.src/clips
+
+# Logs
+*.log
+
+
+Thumbs.db
