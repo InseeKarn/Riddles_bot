@@ -57,7 +57,15 @@ def search(exclude_ids):
     }
 
     res = requests.get(url, params=params, timeout=15)
-    data = res.json()
+    if res.status_code != 200:
+        print(f"❌ Pixabay API error: {res.status_code} — {res.text[:200]}")
+        return [], [], []
+
+    try:
+        data = res.json()
+    except ValueError as e:
+        print(f"❌ JSON decode error: {e} — content preview: {res.text[:200]}")
+        return [], [], []
 
     vertical_4k, vertical_other, horizontal = [], [], []
 
