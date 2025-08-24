@@ -77,11 +77,21 @@ def upload_video(file_path, title, description,
     print(f"✅ Uploaded: https://youtu.be/{video_id}")
 
     # print(youtube_api)
-    
-if __name__ == "__main__":
-    upload_video(
-        file_path="E:\projects\Youtube_Bot\src\clips\W_jeans_1.mp4",
-        title="My Test Upload",
-        description="Uploaded using Python!"
-    )
 
+raw_title = """120FPS 
+#shorts #ytshorts #viralshorts #trending #fyp #space 
+#universe #galaxy #cosmos #nasa #milkyway #nebula #stars 
+#blackhole #interstellar #astrophotography #spacelover 
+#astronomy #cosmicbeauty #spaceexploration #amazinguniverse 
+#spaceart #beautifulspace #outerspace #spacefacts #science"""
+
+# ลบขึ้นบรรทัด → เหลือเป็นบรรทัดเดียว
+clean_title = " ".join(raw_title.split())
+# ตัดไม่ให้เกิน 100 ตัว
+clean_title = clean_title[:100]
+
+upload_video(
+    file_path="src\\outputs\\final_video_.mp4",
+    title=clean_title,
+    description="120FPS"
+)

@@ -17,7 +17,6 @@ token.json
 # VSCode / IDE
 .vscode/
 .idea/
-.src/clips
 
 # Logs
 *.log
