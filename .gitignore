@@ -6,7 +6,7 @@ __pycache__/
 *.sqlite3
 
 # Virtual environment
-venv/
+venv_new/
 env/
 
 # Credentials & tokens

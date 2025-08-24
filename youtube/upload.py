@@ -1,15 +1,15 @@
 import os
 import time
-import googleapiclient
-import google_auth_oauthlib
-import google.oauth2
 from dotenv import load_dotenv
 
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from google.auth.transport.requests import Request
 
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.oauth2.credentials import Credentials
+
+
 
 SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 load_dotenv()
@@ -28,9 +28,17 @@ def get_service():
 
     # if not or token expire → create new OAuth flow 
     if not creds or not creds.valid:
-        flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
-        creds = flow.run_local_server(port=0)  # Open browser for login
-        # save token
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())  # Refresh TOKEN
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                "credentials.json", SCOPES
+            )
+            creds = flow.run_local_server(
+                port=0,
+                access_type="offline",
+                prompt="consent"
+            )
         with open("token.json", "w") as token:
             token.write(creds.to_json())
 
@@ -61,7 +69,7 @@ def upload_video(file_path, title, description,
     }
 
     # เตรียมไฟล์วิดีโอที่จะอัปโหลด
-    media = MediaFileUpload(file_path)
+    media = MediaFileUpload(file_path, chunksize=-1, resumable=True)
 
     # ส่งคำขออัปโหลดไปยัง API
     request = youtube.videos().insert(
@@ -73,25 +81,40 @@ def upload_video(file_path, title, description,
     print(f"Uploading...")
     response = request.execute()  # รอผลลัพธ์
     video_id = response["id"]     # เก็บ videoId ที่ได้กลับมา
-
+    video_url = f"https://youtu.be/{video_id}"
     print(f"✅ Uploaded: https://youtu.be/{video_id}")
+    return video_url
 
     # print(youtube_api)
+def run_upload():
+    raw_title = """120FPS 
+    #shorts #ytshorts #viralshorts #trending #fyp #space 
+    #universe #galaxy #cosmos #nasa #milkyway #nebula #stars 
+    #blackhole #interstellar #astrophotography #spacelover 
+    #astronomy #cosmicbeauty #spaceexploration #amazinguniverse 
+    #spaceart #beautifulspace #outerspace #spacefacts #science"""
 
-raw_title = """120FPS 
-#shorts #ytshorts #viralshorts #trending #fyp #space 
-#universe #galaxy #cosmos #nasa #milkyway #nebula #stars 
-#blackhole #interstellar #astrophotography #spacelover 
-#astronomy #cosmicbeauty #spaceexploration #amazinguniverse 
-#spaceart #beautifulspace #outerspace #spacefacts #science"""
+    # ลบขึ้นบรรทัด → เหลือเป็นบรรทัดเดียว
+    clean_title = " ".join(raw_title.split())
+    # ตัดไม่ให้เกิน 100 ตัว
+    clean_title = clean_title[:100]
 
-# ลบขึ้นบรรทัด → เหลือเป็นบรรทัดเดียว
-clean_title = " ".join(raw_title.split())
-# ตัดไม่ให้เกิน 100 ตัว
-clean_title = clean_title[:100]
+    file_path = "src\\outputs\\final_video_.mp4"
+    video_url = upload_video(
+        file_path= file_path,
+        title=clean_title,
+        description="120FPS"
+    )
 
-upload_video(
-    file_path="src\\outputs\\final_video_.mp4",
-    title=clean_title,
-    description="120FPS"
-)
+    # 🆕 Delete after uploaded
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+            print(f"🗑️ Deleted file: {file_path}")
+        except Exception as e:
+            print(f"⚠️ Failed to delete file: {e}")
+
+    return video_url
+
+if __name__ == "__main__":
+    run_upload()

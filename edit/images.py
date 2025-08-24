@@ -9,13 +9,15 @@ load_dotenv()
 
 API_KEY = os.getenv("PIXA_API")
 
-queries = ["Space", "Galaxy", "Planet", "orbit", "star"]
+queries = ["Space", "Galaxy", "Planet", "Orbit"]
 needed = 10
 min_needed = 8
 history_file = Path("pixabay_seen.json")
 unused_file = Path("pixabay_unused.json")
 download_dir = Path("src\\bg")
 download_dir.mkdir(exist_ok=True)
+blacklist_file = Path("pixabay_blocked.json")
+
 
 def load_json(path):
     if path.exists():
@@ -51,7 +53,7 @@ def search(exclude_ids):
         "q": query,
         "per_page": 200,
         "video_type": "all",
-        "safesearch": "true"  # เปิด true เพื่อให้ได้ผลลัพธ์มากขึ้น
+        "safesearch": "flase"  
     }
 
     res = requests.get(url, params=params, timeout=15)
@@ -69,59 +71,78 @@ def search(exclude_ids):
         width = video_data.get("width", 0)
         height = video_data.get("height", 0)
         url_video = video_data.get("url")
+        downloads = hit.get("downloads", 0)
 
         if not url_video:
             continue
 
         if height > width:
             if width >= 2160 and height >= 3840:
-                vertical_4k.append((vid_id, url_video))
+                vertical_4k.append((vid_id, url_video, downloads))
             else:
-                vertical_other.append((vid_id, url_video))
+                vertical_other.append((vid_id, url_video, downloads))
         else:
-            horizontal.append((vid_id, url_video))  # เก็บแนวนอนด้วย
+            horizontal.append((vid_id, url_video, downloads))  # Pick horizontal
+    
+    vertical_4k.sort(key=lambda x: x[2], reverse=True)
+    vertical_other.sort(key=lambda x: x[2], reverse=True)
+    horizontal.sort(key=lambda x: x[2], reverse=True)
 
-    return vertical_4k, vertical_other, horizontal
+    return (
+        [(vid, url) for vid, url, _ in vertical_4k],
+        [(vid, url) for vid, url, _ in vertical_other],
+        [(vid, url) for vid, url, _ in horizontal]
+    )
 
+def run_pixabay():
+    blacklist_ids = set(load_json(blacklist_file))
+    seen_ids = set(load_json(history_file))
+    unused_list = load_json(unused_file)  
+    selected = []
 
-# โหลดรายการที่เคยดาวน์โหลดแล้ว และ unused จากฝั่ง MoviePy
-seen_ids = set(load_json(history_file))
-unused_list = load_json(unused_file)  
-selected = []
+    # 🆕 ถ้าประวัติเกินหรือเท่ากับ 40 ให้รีเซ็ตเลย
+    if len(seen_ids) >= 40:
+        print(f"🔄 Resetting history — was {len(seen_ids)} items")
+        seen_ids.clear()
+        save_json(history_file, [])  # เขียนไฟล์ให้เป็น list ว่าง
 
-# 1. ใช้ unused ก่อน
-while unused_list and len(selected) < needed:
-    selected.append(unused_list.pop(0))
+    # 1. ใช้ unused ก่อน
+    while unused_list and len(selected) < needed:
+        selected.append(unused_list.pop(0))
 
-# 2. หาใหม่ถ้ายังไม่พอ
-while len(selected) < needed:
-    exclude = seen_ids.union({vid for vid, _ in selected})
+    # 2. หาใหม่ถ้ายังไม่พอ
+    while len(selected) < needed:
+        exclude = seen_ids.union({vid for vid, _ in selected}).union(blacklist_ids)
 
-    while True:
-        v4k, vother, horiz = search(exclude)
-        if v4k or vother or horiz:
-            break
-        print("⚠️ No videos found for this query. Retrying...")
-        # จะสุ่ม query ใหม่เพราะ search() random.choice(queries) อยู่แล้ว
+        while True:
+            v4k, vother, horiz = search(exclude)
+            if v4k or vother or horiz:
+                break
+            print("⚠️ No videos found for this query. Retrying...")
+            # จะสุ่ม query ใหม่เพราะ search() random.choice(queries) อยู่แล้ว
 
-    remaining = needed - len(selected)
+        remaining = needed - len(selected)
 
-    pool_vertical = v4k + vother
-    if len(pool_vertical) >= remaining:
-        selected.extend(random.sample(pool_vertical, k=remaining))
-    else:
-        selected.extend(pool_vertical)
-        more_need = remaining - len(pool_vertical)
+        pool_vertical = v4k + vother
+        if len(pool_vertical) >= remaining:
+            selected.extend(random.sample(pool_vertical, k=remaining))
+        else:
+            selected.extend(pool_vertical)
+            more_need = remaining - len(pool_vertical)
 
-        # เติมด้วย horizontal ถ้ายังไม่ครบ
-        if more_need > 0 and horiz:
-            take_h = min(more_need, len(horiz))
-            selected.extend(random.sample(horiz, k=take_h))
+            # เติมด้วย horizontal ถ้ายังไม่ครบ
+            if more_need > 0 and horiz:
+                take_h = min(more_need, len(horiz))
+                selected.extend(random.sample(horiz, k=take_h))
 
-# 3. โหลดและอัปเดตประวัติ
-for vid_id, v_url in selected:
-    seen_ids.add(vid_id)
-    filepath = download_dir / f"{vid_id}.mp4"
-    download(v_url, filepath)
+    # 3. โหลดและอัปเดตประวัติ
+    for vid_id, v_url in selected:
+        seen_ids.add(vid_id)
+        filepath = download_dir / f"{vid_id}.mp4"
+        download(v_url, filepath)
 
-save_json(history_file, sorted(list(seen_ids)))
+    save_json(history_file, sorted(list(seen_ids)))
+    return True
+
+# if __name__ == "__main__":
+#     run_pixabay()

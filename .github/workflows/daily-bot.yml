@@ -1,0 +1,25 @@
+name: Daily Bot
+
+on:
+  schedule:
+    - cron: "0 17 * * *"   # 00:00 เวลาไทย (17:00 UTC)
+    - cron: "0 23 * * *"   # 06:00 เวลาไทย (23:00 UTC)
+  workflow_dispatch:      # ให้กดรันเองได้จากหน้าเว็บ
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run script
+        run: python main.py
