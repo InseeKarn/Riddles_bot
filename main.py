@@ -4,6 +4,7 @@ from youtube.upload import run_upload
 from notify.discord import discord_message
 from dotenv import load_dotenv
 import sys, os
+
 load_dotenv()
 
 def safe_run_pixabay():
