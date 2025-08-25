@@ -4,12 +4,15 @@ import random
 import json
 from pathlib import Path
 from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 
 load_dotenv()
 
 API_KEY = os.getenv("PIXA_API") or os.environ.get("PIXA_API")
 
 queries = ["Space", "Galaxy", "Planet", "Orbit"]
+queries_pool = random.sample(queries, len(queries))
 needed = 10
 min_needed = 8
 history_file = Path("pixabay_seen.json")
@@ -30,7 +33,7 @@ def load_json(path):
 def save_json(path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
-def download(url, dest_path):
+def download(url, dest_path, index=None, total=None):
     """Download file from URL in chunk avoid ERROR"""
     try:
         with requests.get(url, stream=True, timeout=30) as r:
@@ -39,14 +42,13 @@ def download(url, dest_path):
                 for chunk in r.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
-        print(f"✅ Download success!!: {dest_path}")
     except Exception as e:
-        print(f"❌ Download Fail!!: {url} — {e}")
+        raise RuntimeError(f"Download Fail: {url} — {e}")
 
 def search(exclude_ids):
     query = random.choice(queries)
     print(f"🔍 Finding: {query}")
-    print("DEBUG PIXABAY_API_KEY:", os.getenv("PIXABAY_API_KEY"))
+    print("DEBUG API KEY SET:", bool(API_KEY))
     url = "https://pixabay.com/api/videos/"
     params = {
         "key": API_KEY,
@@ -102,10 +104,17 @@ def search(exclude_ids):
         [(vid, url) for vid, url, _ in horizontal]
     )
 
+
+blacklist_ids = set(load_json(blacklist_file))
+seen_ids = set(load_json(history_file))
+unused_list = load_json(unused_file)
+
 def run_pixabay():
-    blacklist_ids = set(load_json(blacklist_file))
-    seen_ids = set(load_json(history_file))
-    unused_list = load_json(unused_file)  
+
+    if not API_KEY:
+        print("❌ Missing API key. Set PIXABAY_API_KEY or PIXA_API in .env")
+        return False
+    
     selected = []
 
     # 🆕 ถ้าประวัติเกินหรือเท่ากับ 40 ให้รีเซ็ตเลย
@@ -119,38 +128,80 @@ def run_pixabay():
         selected.append(unused_list.pop(0))
 
     # 2. หาใหม่ถ้ายังไม่พอ
-    while len(selected) < needed:
+    attempts = 0
+    MAX_ATTEMPTS_IF_NOT_FULL = 2
+    MAX_CLIPS = 10  # เพดานสูงสุด
+
+    while len(selected) < MAX_CLIPS:
         exclude = seen_ids.union({vid for vid, _ in selected}).union(blacklist_ids)
 
-        while True:
-            v4k, vother, horiz = search(exclude)
-            if v4k or vother or horiz:
+        v4k, vother, horiz = search(exclude)
+        if not (v4k or vother or horiz):
+            attempts += 1
+            print(f"⚠️ No videos found — skipping ({attempts}/{MAX_ATTEMPTS_IF_NOT_FULL})")
+            if attempts >= MAX_ATTEMPTS_IF_NOT_FULL:
                 break
-            print("⚠️ No videos found for this query. Retrying...")
-            # จะสุ่ม query ใหม่เพราะ search() random.choice(queries) อยู่แล้ว
+            continue
 
-        remaining = needed - len(selected)
-
+        space_left = MAX_CLIPS - len(selected)
         pool_vertical = v4k + vother
-        if len(pool_vertical) >= remaining:
-            selected.extend(random.sample(pool_vertical, k=remaining))
+        take = []
+
+        if len(pool_vertical) >= space_left:
+            take = random.sample(pool_vertical, k=space_left)
         else:
-            selected.extend(pool_vertical)
-            more_need = remaining - len(pool_vertical)
-
-            # เติมด้วย horizontal ถ้ายังไม่ครบ
+            take = pool_vertical[:]
+            more_need = space_left - len(pool_vertical)
             if more_need > 0 and horiz:
-                take_h = min(more_need, len(horiz))
-                selected.extend(random.sample(horiz, k=take_h))
+                take += random.sample(horiz, k=min(more_need, len(horiz)))
 
-    # 3. โหลดและอัปเดตประวัติ
-    for vid_id, v_url in selected:
-        seen_ids.add(vid_id)
-        filepath = download_dir / f"{vid_id}.mp4"
-        download(v_url, filepath)
+        # ถ้าไม่เจอเพิ่ม ก็นับความพยายาม
+        if not take:
+            attempts += 1
+            if attempts >= MAX_ATTEMPTS_IF_NOT_FULL:
+                break
+            continue
+
+        # เติมคลิปโดยล็อกไม่ให้เกินเพดาน
+        take = take[:space_left]
+        selected.extend(take)
+
+        # ถ้ามีเพิ่ม → ล้างตัวนับ เพราะถือว่าหาเจอ
+        attempts = 0
+
+        if len(selected) >= MAX_CLIPS:
+            break
+
+    def download_task(i, total, vid_id, url):
+        dest_path = download_dir / f"{vid_id}.mp4"
+        download(url, dest_path)
+        return dest_path
+    
+    # 3. โหลดและอัปเดตประวัติ (แบบ parallel)
+    total_files = len(selected)
+    results = []
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_info = {
+            executor.submit(download_task, i, total_files, vid_id, v_url): (i, total_files)
+            for i, (vid_id, v_url) in enumerate(selected, start=1)
+        }
+        seen_ids.update(vid_id for vid_id, _ in selected)
+
+        for future in as_completed(future_to_info):
+            i, total = future_to_info[future]
+            try:
+                path = future.result()
+                results.append((i, total, path))
+            except Exception as e:
+                results.append((i, total, f"Fail: {e}"))
+
+    # เรียงตาม i ก่อนแสดงผล
+    for i, total, path in sorted(results, key=lambda x: x[0]):
+        print(f"✅ Download success!! ({i}/{total}): {path}")
 
     save_json(history_file, sorted(list(seen_ids)))
+    save_json(unused_file, unused_list)  # ถ้ามี unused_list เหลือ
     return True
 
-# if __name__ == "__main__":
-#     run_pixabay()
+if __name__ == "__main__":
+    run_pixabay()

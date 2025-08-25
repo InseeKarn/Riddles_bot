@@ -52,7 +52,20 @@ jobs:
         [ -f pixabay_blocked.json ] || echo "[]" > pixabay_blocked.json
         [ -f token.json ] || echo "{}" > token.json
         [ -f pixabay_seen.json ] || echo "[]" > pixabay_seen.json
+    
+      # 🛑 เช็ก block ก่อนรัน (ข้ามถ้าเป็น cron และยังไม่ครบ 24 ชม.)
+    - name: Check upload block
+      run: |
+        if [ "${{ github.event_name }}" = "schedule" ] && [ -f upload_block_until.txt ]; then
+          until_ts=$(cat upload_block_until.txt)
+          now_ts=$(date +%s)
+          if [ "$now_ts" -lt "$until_ts" ]; then
+            echo "⏳ ยังอยู่ในช่วงบล็อกอัปโหลด ข้ามการรัน"
+            exit 0
+          fi
+        fi
 
+  
     # ✅ credentials.json (สร้างถ้ามี secret)
     - name: Create credentials.json
       if: ${{ env.HAS_CRED }}
@@ -69,8 +82,23 @@ jobs:
         python -m json.tool credentials.json > /dev/null
         python -m json.tool token.json > /dev/null
 
-    - name: Run script
-      run: python main.py
+    - name: Run script and set block if limit hit
+      run: |
+        set -e
+        python main.py 2>&1 | tee run.log || true
+
+        if grep -q "uploadLimitExceeded" run.log; then
+          echo "Found YouTube upload limit → Block 24 hr."
+          date -u +"%Y-%m-%d %H:%M:%S UTC"
+          echo $(( $(date +%s) + 86400 )) > upload_block_until.txt
+          exit 0
+          
+          # Notify Discord
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"⚠️ Upload Limit Detected — Blocked until $(date -d '+24 hours' '+%Y-%m-%d %H:%M:%S %Z')\"}" \
+               "$DISCORD_WEBHOOK_URL"
+        fi
 
     # ✅ Save state
     - name: Save initial state files
