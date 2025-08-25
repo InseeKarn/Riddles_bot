@@ -72,10 +72,10 @@ def video_edit():
     # ===== Random musics =====
     music_files = list(music_dir.glob("*.mp3"))
     if not music_files:
-        print("⚠️ ไม่พบไฟล์ .mp3 ในโฟลเดอร์ src/mp3 จะทำงานต่อโดยไม่มีเพลงประกอบ")
+        print("⚠️ file .mp3 not found in dir src/mp3 will process with no audio")
     else:
         chosen_music = random.choice(music_files)
-        print(f"🎵 เลือกเพลง: {chosen_music.name}")
+        print(f"🎵 Adding music...: {chosen_music.name}")
 
         bg_music = AudioFileClip(str(chosen_music))
 
@@ -106,8 +106,8 @@ def video_edit():
         if vf.stem in used_in_this_run:
             vf.unlink()
 
-    print(f"✅ ใช้ {len(used_in_this_run)} คลิป ลบออกเรียบร้อย, "
-        f"เหลือ {len(still_unused)} คลิปที่ยังไม่ถูกใช้")
+    print(f"✅ Use {len(used_in_this_run)} vids Deleted, "
+        f"Remain {len(still_unused)} vids not been use")
     
 if __name__ == "__main__":
     video_edit()

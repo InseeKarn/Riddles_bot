@@ -13,7 +13,7 @@ env/
 credentials.json
 token.json
 .env
-
+.secrets
 # VSCode / IDE
 .vscode/
 .idea/

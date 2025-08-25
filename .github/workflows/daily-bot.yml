@@ -9,6 +9,21 @@ on:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    env:
+      YT_API: ${{ secrets.YT_API }}
+      YT_PRIVACY: ${{ secrets.YT_PRIVACY }}
+      YT_CATEGORY: ${{ secrets.YT_CATEGORY }}
+
+      DIS_AUTH: ${{ secrets.DIS_AUTH }}
+
+      UNS_ACCESS: ${{ secrets.UNS_ACCESS }}
+      UNS_SECRET: ${{ secrets.UNS_SECRET }}
+      UNS_APPID: ${{ secrets.UNS_APPID }}
+
+      PIXA_API: ${{ secrets.PIXA_API }}
+
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

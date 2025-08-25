@@ -68,19 +68,19 @@ def upload_video(file_path, title, description,
         }
     }
 
-    # เตรียมไฟล์วิดีโอที่จะอัปโหลด
+    # Prepare file to upload
     media = MediaFileUpload(file_path, chunksize=-1, resumable=True)
 
-    # ส่งคำขออัปโหลดไปยัง API
+    # request to API
     request = youtube.videos().insert(
-        part="snippet,status",  # ต้องตรงกับ fields ใน body
+        part="snippet,status",  # Must match fields in body
         body=body,
         media_body=media
     )
 
     print(f"Uploading...")
-    response = request.execute()  # รอผลลัพธ์
-    video_id = response["id"]     # เก็บ videoId ที่ได้กลับมา
+    response = request.execute()  # wait for result
+    video_id = response["id"]     # save videoId 
     video_url = f"https://youtu.be/{video_id}"
     print(f"✅ Uploaded: https://youtu.be/{video_id}")
     return video_url
@@ -94,9 +94,9 @@ def run_upload():
     #astronomy #cosmicbeauty #spaceexploration #amazinguniverse 
     #spaceart #beautifulspace #outerspace #spacefacts #science"""
 
-    # ลบขึ้นบรรทัด → เหลือเป็นบรรทัดเดียว
+    
     clean_title = " ".join(raw_title.split())
-    # ตัดไม่ให้เกิน 100 ตัว
+    # x <= 100 ตัว
     clean_title = clean_title[:100]
 
     file_path = "src\\outputs\\final_video_.mp4"

@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_KEY = os.getenv("PIXA_API")
+API_KEY = os.getenv("PIXA_API") or os.environ.get("PIXA_API")
 
 queries = ["Space", "Galaxy", "Planet", "Orbit"]
 needed = 10
@@ -46,7 +46,7 @@ def download(url, dest_path):
 def search(exclude_ids):
     query = random.choice(queries)
     print(f"🔍 Finding: {query}")
-
+    print("DEBUG PIXABAY_API_KEY:", os.getenv("PIXABAY_API_KEY"))
     url = "https://pixabay.com/api/videos/"
     params = {
         "key": API_KEY,
