@@ -67,8 +67,8 @@ jobs:
 
     - name: Validate JSON files
       run: |
-        python -m json.tool credentials.json
-        python -m json.tool token.json
+        python -m json.tool credentials.json > /dev/null
+        python -m json.tool token.json > /dev/null
 
     # 🔹 รันสคริปต์หลังจากไฟล์ครบแล้ว
     - name: Run script
