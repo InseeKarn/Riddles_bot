@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: "0 17 * * *"   # 00:00 เวลาไทย (17:00 UTC)
     - cron: "0 23 * * *"   # 06:00 เวลาไทย (23:00 UTC)
-  workflow_dispatch:      # ให้กดรันเองได้จากหน้าเว็บ
+  workflow_dispatch:      # รันเองได้จากหน้าเว็บ
 
 jobs:
   run-bot:
@@ -13,15 +13,11 @@ jobs:
       YT_API: ${{ secrets.YT_API }}
       YT_PRIVACY: ${{ secrets.YT_PRIVACY }}
       YT_CATEGORY: ${{ secrets.YT_CATEGORY }}
-
       DIS_AUTH: ${{ secrets.DIS_AUTH }}
-
       UNS_ACCESS: ${{ secrets.UNS_ACCESS }}
       UNS_SECRET: ${{ secrets.UNS_SECRET }}
       UNS_APPID: ${{ secrets.UNS_APPID }}
-
       PIXA_API: ${{ secrets.PIXA_API }}
-
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
       
     steps:
@@ -36,8 +32,6 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
 
-
-
     # ✅ ดึง state ล่าสุดจากรอบก่อน (ถ้ามี)
     - name: Restore state files from previous run
       uses: actions/download-artifact@v4
@@ -46,7 +40,7 @@ jobs:
         path: .
       continue-on-error: true
 
-    # ✅ ถ้าไม่มี state จาก artifact (รันแรก) ให้สร้างไฟล์ว่าง
+    # ✅ ถ้าไม่มี state ให้สร้างไฟล์ว่าง
     - name: Create empty state files if missing
       run: |
         [ -f downloaded_not_edited.json ] || echo "[]" > downloaded_not_edited.json
@@ -54,27 +48,28 @@ jobs:
         [ -f token.json ] || echo "{}" > token.json
         [ -f pixabay_seen.json ] || echo "[]" > pixabay_seen.json
 
-    # ✅ สร้าง credentials.json จาก secret (ใช้ printf กัน format เพี้ยน)
+    # ✅ สร้าง credentials.json จาก secret
     - name: Create credentials.json
-      run: printf '%s' "${{ secrets.YT_CREDENTIALS }}" > credentials.json
+      run: printf '%s' '${{ secrets.YT_CREDENTIALS }}' > credentials.json
 
-    # ✅ สร้าง token.json จาก secret (ถ้าใช้ Google OAuth token เก็บใน secrets)
+    # ✅ สร้าง token.json จาก secret (ข้ามถ้าไม่มี secret)
     - name: Create token.json from secret
-      if: env.TOKEN_JSON != ''
-      env:
-        TOKEN_JSON: ${{ secrets.TOKEN_JSON }}
-      run: printf '%s' "$TOKEN_JSON" > token.json
+      if: ${{ secrets.TOKEN_JSON != '' }}
+      run: printf '%s' '${{ secrets.TOKEN_JSON }}' > token.json
 
+    # ✅ ตรวจสอบว่า JSON ถูกต้อง
     - name: Validate JSON files
       run: |
+        echo "Validating credentials.json..."
         python -m json.tool credentials.json > /dev/null
+        echo "Validating token.json..."
         python -m json.tool token.json > /dev/null
 
-    # 🔹 รันสคริปต์หลังจากไฟล์ครบแล้ว
+    # 🔹 รันสคริปต์หลัก
     - name: Run script
       run: python main.py
 
-    # ✅ เซฟ state ที่อัปเดตแล้วเก็บไว้ใช้รอบหน้า
+    # ✅ เก็บ state สำหรับรอบถัดไป
     - name: Save updated state files
       uses: actions/upload-artifact@v4
       with:
@@ -84,4 +79,3 @@ jobs:
           pixabay_blocked.json
           token.json
           pixabay_seen.json
-
