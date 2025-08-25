@@ -73,12 +73,15 @@ jobs:
       run: python main.py
 
     # ✅ Save state
-    - name: Save updated state files
+    - name: Save initial state files
       uses: actions/upload-artifact@v4
       with:
         name: state-files
         path: |
           downloaded_not_edited.json
+          pixabay_blocked.json
+          token.json
+          pixabay_seen.json
           pixabay_blocked.json
           token.json
           pixabay_seen.json
