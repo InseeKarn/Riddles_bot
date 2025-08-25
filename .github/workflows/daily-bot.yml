@@ -2,7 +2,7 @@ name: Daily Bot
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # 06:00 เวลาไทย (23:00 UTC)
+    - cron: "*/2 * * * *"   # 06:00 เวลาไทย (23:00 UTC)
   workflow_dispatch:      # รันเองได้จากหน้าเว็บ
 
 jobs:
