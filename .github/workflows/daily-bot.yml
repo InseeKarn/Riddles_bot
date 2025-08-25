@@ -19,6 +19,8 @@ jobs:
       UNS_APPID: ${{ secrets.UNS_APPID }}
       PIXA_API: ${{ secrets.PIXA_API }}
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      HAS_CRED: ${{ secrets.YT_CREDENTIALS != '' }}
+      HAS_TOKEN: ${{ secrets.TOKEN_JSON != '' }}
       
     steps:
     - name: Checkout code
@@ -32,15 +34,15 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
 
-    # ✅ ดึง state ล่าสุดจากรอบก่อน (ถ้ามี)
-    - name: Restore state files from previous run
+    # ✅ ดึง state
+    - name: Restore state files
       uses: actions/download-artifact@v4
       with:
         name: state-files
         path: .
       continue-on-error: true
 
-    # ✅ ถ้าไม่มี state ให้สร้างไฟล์ว่าง
+    # ✅ ไฟล์ว่าง
     - name: Create empty state files if missing
       run: |
         [ -f downloaded_not_edited.json ] || echo "[]" > downloaded_not_edited.json
@@ -48,28 +50,26 @@ jobs:
         [ -f token.json ] || echo "{}" > token.json
         [ -f pixabay_seen.json ] || echo "[]" > pixabay_seen.json
 
-    # ✅ สร้าง credentials.json จาก secret
+    # ✅ credentials.json (สร้างถ้ามี secret)
     - name: Create credentials.json
+      if: ${{ env.HAS_CRED }}
       run: printf '%s' '${{ secrets.YT_CREDENTIALS }}' > credentials.json
 
-    # ✅ สร้าง token.json จาก secret (ข้ามถ้าไม่มี secret)
-    - name: Create token.json from secret
-      if: ${{ secrets.TOKEN_JSON != '' }}
+    # ✅ token.json (สร้างถ้ามี secret)
+    - name: Create token.json
+      if: ${{ env.HAS_TOKEN }}
       run: printf '%s' '${{ secrets.TOKEN_JSON }}' > token.json
 
-    # ✅ ตรวจสอบว่า JSON ถูกต้อง
+    # ✅ Validate JSON
     - name: Validate JSON files
       run: |
-        echo "Validating credentials.json..."
         python -m json.tool credentials.json > /dev/null
-        echo "Validating token.json..."
         python -m json.tool token.json > /dev/null
 
-    # 🔹 รันสคริปต์หลัก
     - name: Run script
       run: python main.py
 
-    # ✅ เก็บ state สำหรับรอบถัดไป
+    # ✅ Save state
     - name: Save updated state files
       uses: actions/upload-artifact@v4
       with:
