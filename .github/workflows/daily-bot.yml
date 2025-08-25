@@ -36,6 +36,8 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
 
+
+
     # ✅ ดึง state ล่าสุดจากรอบก่อน (ถ้ามี)
     - name: Restore state files from previous run
       uses: actions/download-artifact@v4
@@ -44,9 +46,29 @@ jobs:
         path: .
       continue-on-error: true
 
-    # ✅ สร้าง credentials.json จาก secret
+    # ✅ ถ้าไม่มี state จาก artifact (รันแรก) ให้สร้างไฟล์ว่าง
+    - name: Create empty state files if missing
+      run: |
+        [ -f downloaded_not_edited.json ] || echo "[]" > downloaded_not_edited.json
+        [ -f pixabay_blocked.json ] || echo "[]" > pixabay_blocked.json
+        [ -f token.json ] || echo "{}" > token.json
+        [ -f pixabay_seen.json ] || echo "[]" > pixabay_seen.json
+
+    # ✅ สร้าง credentials.json จาก secret (ใช้ printf กัน format เพี้ยน)
     - name: Create credentials.json
-      run: echo "${{ secrets.YT_CREDENTIALS }}" > credentials.json
+      run: printf '%s' "${{ secrets.YT_CREDENTIALS }}" > credentials.json
+
+    # ✅ สร้าง token.json จาก secret (ถ้าใช้ Google OAuth token เก็บใน secrets)
+    - name: Create token.json from secret
+      if: env.TOKEN_JSON != ''
+      env:
+        TOKEN_JSON: ${{ secrets.TOKEN_JSON }}
+      run: printf '%s' "$TOKEN_JSON" > token.json
+
+    - name: Validate JSON files
+      run: |
+        python -m json.tool credentials.json
+        python -m json.tool token.json
 
     # 🔹 รันสคริปต์หลังจากไฟล์ครบแล้ว
     - name: Run script
