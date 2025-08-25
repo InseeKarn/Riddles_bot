@@ -25,16 +25,41 @@ jobs:
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
       
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+    - name: Install dependencies
+      run: pip install -r requirements.txt
 
-      - name: Run script
-        run: python main.py
+    # ✅ ดึง state ล่าสุดจากรอบก่อน (ถ้ามี)
+    - name: Restore state files from previous run
+      uses: actions/download-artifact@v4
+      with:
+        name: state-files
+        path: .
+      continue-on-error: true
+
+    # ✅ สร้าง credentials.json จาก secret
+    - name: Create credentials.json
+      run: echo "${{ secrets.YT_CREDENTIALS }}" > credentials.json
+
+    # 🔹 รันสคริปต์หลังจากไฟล์ครบแล้ว
+    - name: Run script
+      run: python main.py
+
+    # ✅ เซฟ state ที่อัปเดตแล้วเก็บไว้ใช้รอบหน้า
+    - name: Save updated state files
+      uses: actions/upload-artifact@v4
+      with:
+        name: state-files
+        path: |
+          downloaded_not_edited.json
+          pixabay_blocked.json
+          token.json
+          pixabay_seen.json
+
