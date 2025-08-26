@@ -11,7 +11,7 @@ load_dotenv()
 
 API_KEY = os.getenv("PIXA_API") or os.environ.get("PIXA_API")
 
-queries = ["Space", "Galaxy", "Planet", "Orbit"]
+queries = ["Animals", "Galaxy", "View", "Nature"]
 queries_pool = random.sample(queries, len(queries))
 needed = 10
 min_needed = 8
