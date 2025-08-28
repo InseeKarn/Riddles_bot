@@ -10,21 +10,8 @@ on:
   workflow_dispatch:      # รันเองได้จากหน้าเว็บ
 
 jobs:
-  save-state:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/upload-artifact@v4
-        with:
-          name: state-files
-          path: |
-            downloaded_not_edited.json
-            pixabay_blocked.json
-            token.json
-            pixabay_seen.json
-          retention-days: 90
   run-bot:
     runs-on: ubuntu-latest
-    needs: save-state
     env:
       PEXELS_API: ${{ secrets.PEXELS_API }}
       YT_API: ${{ secrets.YT_API }}
@@ -40,13 +27,6 @@ jobs:
       HAS_TOKEN: ${{ secrets.TOKEN_JSON != '' }}
       
     steps:
-
-    - uses: actions/checkout@v3
-    - uses: actions/download-artifact@v4
-      with:
-        name: state-files
-        path: .
-
     - name: Checkout code
       uses: actions/checkout@v3
 
@@ -58,13 +38,18 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
 
+    # 1. ดึง repo ทั้งหมดรวม branch state-storage
+    - name: Checkout repo
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # ต้องดึงทุก branch
+
     # ✅ ดึง state
     - name: Restore state files
-      uses: actions/download-artifact@v4
-      with:
-        name: state-files
-        path: .
-      continue-on-error: true
+      run: |
+        git fetch origin state-storage || echo "No state branch yet"
+        git checkout state-storage -- downloaded_not_edited.json pixabay_blocked.json token.json pixabay_seen.json 2>/dev/null || echo "No state files yet"
+        git checkout ${{ github.ref_name }}  # กลับมาที่ branch workflow
 
     # ✅ ไฟล์ว่าง
     - name: Create empty state files if missing
@@ -121,16 +106,14 @@ jobs:
                "$DISCORD_WEBHOOK_URL"
         fi
 
-    # ✅ Save state
-    - name: Save initial state files
-      uses: actions/upload-artifact@v4
-      with:
-        name: state-files
-        path: |
-          downloaded_not_edited.json
-          pixabay_blocked.json
-          token.json
-          pixabay_seen.json
-          pixabay_blocked.json
-          token.json
-          pixabay_seen.json
+    # 5. บันทึก state กลับขึ้น branch
+    - name: Save state to branch
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git fetch origin state-storage || true
+        git checkout -B state-storage
+        cp downloaded_not_edited.json pixabay_blocked.json token.json pixabay_seen.json .
+        git add .
+        git commit -m "Update state $(date -u +'%Y-%m-%d %H:%M:%S UTC')" || echo "No changes"
+        git push origin state-storage
