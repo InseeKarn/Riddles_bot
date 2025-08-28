@@ -13,6 +13,7 @@ jobs:
   run-bot:
     runs-on: ubuntu-latest
     env:
+      PEXELS_API: ${{ secrets.PEXELS_API }}
       YT_API: ${{ secrets.YT_API }}
       YT_PRIVACY: ${{ secrets.YT_PRIVACY }}
       YT_CATEGORY: ${{ secrets.YT_CATEGORY }}
