@@ -38,7 +38,7 @@ if __name__ == "__main__":
             else:
                 print("⚠️ Upload failed, skipping Discord notify")
         else:
-            print("⚠️ Pixabay step failed, skipping video/edit/upload")
+            print("⚠️ Pexels step failed, skipping video/edit/upload")
 
         sys.exit(0)  # ✅ จบด้วย success เสมอ
 

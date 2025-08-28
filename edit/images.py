@@ -187,6 +187,8 @@ def run_pexels():
     save_json(history_file, sorted(list(seen_ids)))
     save_json(unused_file, unused_list)
 
+    return True
+
 
 if __name__ == "__main__":
     run_pexels()
