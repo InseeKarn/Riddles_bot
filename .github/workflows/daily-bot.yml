@@ -111,9 +111,17 @@ jobs:
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+        
         git fetch origin state-storage || true
-        git checkout -B state-storage
-        cp downloaded_not_edited.json pixabay_blocked.json token.json pixabay_seen.json .
-        git add .
+
+        
+        git checkout state-storage 2>/dev/null || git checkout -b state-storage
+
+        
+        git add downloaded_not_edited.json pixabay_blocked.json token.json pixabay_seen.json
+
         git commit -m "Update state $(date -u +'%Y-%m-%d %H:%M:%S UTC')" || echo "No changes"
-        git push origin state-storage
+
+        
+        git push --set-upstream origin state-storage || git push
