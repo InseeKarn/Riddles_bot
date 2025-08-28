@@ -101,6 +101,8 @@ def video_edit():
         final = final.set_audio(bg_music)
     else:
         print("⚠️ file .mp3 not found in dir src/mp3 — process with no audio")
+    
+    output_file.parent.mkdir(parents=True, exist_ok=True)
 
     final.write_videofile(
         str(output_file),

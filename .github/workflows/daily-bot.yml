@@ -38,18 +38,13 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
 
-    # 1. ดึง repo ทั้งหมดรวม branch state-storage
-    - name: Checkout repo
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0  # ต้องดึงทุก branch
-
     # ✅ ดึง state
     - name: Restore state files
-      run: |
-        git fetch origin state-storage || echo "No state branch yet"
-        git checkout state-storage -- downloaded_not_edited.json pixabay_blocked.json token.json pixabay_seen.json 2>/dev/null || echo "No state files yet"
-        git checkout ${{ github.ref_name }}  # กลับมาที่ branch workflow
+      uses: actions/download-artifact@v4
+      with:
+        name: state-files
+        path: .
+      continue-on-error: true
 
     # ✅ ไฟล์ว่าง
     - name: Create empty state files if missing
@@ -106,22 +101,16 @@ jobs:
                "$DISCORD_WEBHOOK_URL"
         fi
 
-    # 5. บันทึก state กลับขึ้น branch
-    - name: Save state to branch
-      run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-        
-        git fetch origin state-storage || true
-
-        
-        git checkout state-storage 2>/dev/null || git checkout -b state-storage
-
-        
-        git add downloaded_not_edited.json pixabay_blocked.json token.json pixabay_seen.json
-
-        git commit -m "Update state $(date -u +'%Y-%m-%d %H:%M:%S UTC')" || echo "No changes"
-
-        
-        git push --set-upstream origin state-storage || git push
+    # ✅ Save state
+    - name: Save initial state files
+      uses: actions/upload-artifact@v4
+      with:
+        name: state-files
+        path: |
+          downloaded_not_edited.json
+          pixabay_blocked.json
+          token.json
+          pixabay_seen.json
+          pixabay_blocked.json
+          token.json
+          pixabay_seen.json
