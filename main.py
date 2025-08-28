@@ -1,4 +1,4 @@
-from edit.images import run_pixabay
+from edit.images import run_pexels
 from edit.video import video_edit
 from youtube.upload import run_upload
 from notify.discord import discord_message
@@ -9,7 +9,7 @@ load_dotenv()
 
 def safe_run_pixabay():
     try:
-        return run_pixabay()
+        return run_pexels()
     except Exception as e:
         print(f"❌ run_pixabay() failed: {e}")
         return False
@@ -21,13 +21,13 @@ def safe_run_upload():
         print(f"❌ run_upload() failed: {e}")
         return None
 
-print("PIXA_API:", bool(os.getenv("PIXA_API")))
+print("PEXELS_API:", bool(os.getenv("PEXELS_API")))
 print("YT_API:", bool(os.getenv("YT_API")))
 
 if __name__ == "__main__":
     try:
         print("🔍 Starting bot...")
-        if safe_run_pixabay():
+        if run_pexels():
             print("🖼️ Image step passed")
             video_edit()
             print("🎬 Video edited")

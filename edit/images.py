@@ -4,22 +4,22 @@ import random
 import json
 from pathlib import Path
 from dotenv import load_dotenv
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 load_dotenv()
 
-API_KEY = os.getenv("PIXA_API") or os.environ.get("PIXA_API")
+API_KEY = os.getenv("PEXELS_API") or os.environ.get("PEXELS_API")
 
-queries = ["Animals", "Galaxy", "View", "Nature"]
-queries_pool = random.sample(queries, len(queries))
+# Queries ที่จะสุ่มค้น
+queries = ["Galaxy"]
 needed = 10
-min_needed = 8
-history_file = Path("pixabay_seen.json")
-unused_file = Path("pixabay_unused.json")
-download_dir = Path("src\\bg")
+download_dir = Path("src/bg")
 download_dir.mkdir(exist_ok=True)
-blacklist_file = Path("pixabay_blocked.json")
+
+# ไฟล์เก็บประวัติ/บล็อก/ยังไม่ได้ใช้
+history_file = Path("pexels_seen.json")
+unused_file = Path("pexels_unused.json")
+blacklist_file = Path("pexels_blocked.json")
 
 
 def load_json(path):
@@ -30,11 +30,12 @@ def load_json(path):
             return []
     return []
 
+
 def save_json(path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
-def download(url, dest_path, index=None, total=None):
-    """Download file from URL in chunk avoid ERROR"""
+
+def download(url, dest_path):
     try:
         with requests.get(url, stream=True, timeout=30) as r:
             r.raise_for_status()
@@ -45,101 +46,94 @@ def download(url, dest_path, index=None, total=None):
     except Exception as e:
         raise RuntimeError(f"Download Fail: {url} — {e}")
 
+
 def search(exclude_ids):
     query = random.choice(queries)
     print(f"🔍 Finding: {query}")
-    print("DEBUG API KEY SET:", bool(API_KEY))
-    url = "https://pixabay.com/api/videos/"
+    url = "https://api.pexels.com/videos/search"
     params = {
-        "key": API_KEY,
-        "q": query,
-        "per_page": 200,
-        "video_type": "all",
-        "safesearch": "flase"  
+        "query": query,
+        "per_page": 80,
+        "orientation": "portrait"  # แนวตั้ง
+    }
+    headers = {
+        "Authorization": API_KEY
     }
 
-    res = requests.get(url, params=params, timeout=15)
+    res = requests.get(url, headers=headers, params=params, timeout=20)
     if res.status_code != 200:
-        print(f"❌ Pixabay API error: {res.status_code} — {res.text[:200]}")
+        print(f"❌ Pexels API error: {res.status_code} — {res.text[:200]}")
         return [], [], []
 
     try:
         data = res.json()
     except ValueError as e:
-        print(f"❌ JSON decode error: {e} — content preview: {res.text[:200]}")
+        print(f"❌ JSON decode error: {e}")
         return [], [], []
 
     vertical_4k, vertical_other, horizontal = [], [], []
 
-    for hit in data.get("hits", []):
-        vid_id = hit.get("id")
+    for vid in data.get("videos", []):
+        vid_id = vid.get("id")
         if vid_id in exclude_ids:
             continue
 
-        videos = hit.get("videos", {})
-        video_data = videos.get("large", {})
-        width = video_data.get("width", 0)
-        height = video_data.get("height", 0)
-        url_video = video_data.get("url")
-        downloads = hit.get("downloads", 0)
+        width = vid.get("width", 0)
+        height = vid.get("height", 0)
+
+        # เลือกไฟล์วิดีโอความละเอียดสูงสุด
+        video_files = vid.get("video_files", [])
+        if not video_files:
+            continue
+        best_file = max(video_files, key=lambda f: f.get("width", 0))
+        url_video = best_file.get("link")
 
         if not url_video:
             continue
 
-        if height > width:
+        if height > width:  # แนวตั้ง
             if width >= 2160 and height >= 3840:
-                vertical_4k.append((vid_id, url_video, downloads))
+                vertical_4k.append((vid_id, url_video))
             else:
-                vertical_other.append((vid_id, url_video, downloads))
+                vertical_other.append((vid_id, url_video))
         else:
-            horizontal.append((vid_id, url_video, downloads))  # Pick horizontal
-    
-    vertical_4k.sort(key=lambda x: x[2], reverse=True)
-    vertical_other.sort(key=lambda x: x[2], reverse=True)
-    horizontal.sort(key=lambda x: x[2], reverse=True)
+            horizontal.append((vid_id, url_video))
 
-    return (
-        [(vid, url) for vid, url, _ in vertical_4k],
-        [(vid, url) for vid, url, _ in vertical_other],
-        [(vid, url) for vid, url, _ in horizontal]
-    )
+    return vertical_4k, vertical_other, horizontal
 
 
-blacklist_ids = set(load_json(blacklist_file))
-seen_ids = set(load_json(history_file))
-unused_list = load_json(unused_file)
-
-def run_pixabay():
-
+def run_pexels():
     if not API_KEY:
-        print("❌ Missing API key. Set PIXABAY_API_KEY or PIXA_API in .env")
+        print("❌ Missing API key. Set PEXELS_API in .env")
         return False
-    
+
+    blacklist_ids = set(load_json(blacklist_file))
+    seen_ids = set(load_json(history_file))
+    unused_list = load_json(unused_file)
+
     selected = []
 
-    # 🆕 ถ้าประวัติเกินหรือเท่ากับ 40 ให้รีเซ็ตเลย
+    # รีเซ็ตประวัติถ้าเกิน 40
     if len(seen_ids) >= 40:
         print(f"🔄 Resetting history — was {len(seen_ids)} items")
         seen_ids.clear()
-        save_json(history_file, [])  # เขียนไฟล์ให้เป็น list ว่าง
+        save_json(history_file, [])
 
-    # 1. ใช้ unused ก่อน
+    # ใช้ unused ก่อน
     while unused_list and len(selected) < needed:
         selected.append(unused_list.pop(0))
 
-    # 2. หาใหม่ถ้ายังไม่พอ
     attempts = 0
-    MAX_ATTEMPTS_IF_NOT_FULL = 2
-    MAX_CLIPS = 10  # เพดานสูงสุด
+    MAX_ATTEMPTS = 3
+    MAX_CLIPS = needed
 
     while len(selected) < MAX_CLIPS:
         exclude = seen_ids.union({vid for vid, _ in selected}).union(blacklist_ids)
-
         v4k, vother, horiz = search(exclude)
+
         if not (v4k or vother or horiz):
             attempts += 1
-            print(f"⚠️ No videos found — skipping ({attempts}/{MAX_ATTEMPTS_IF_NOT_FULL})")
-            if attempts >= MAX_ATTEMPTS_IF_NOT_FULL:
+            if attempts >= MAX_ATTEMPTS:
                 break
             continue
 
@@ -155,29 +149,21 @@ def run_pixabay():
             if more_need > 0 and horiz:
                 take += random.sample(horiz, k=min(more_need, len(horiz)))
 
-        # ถ้าไม่เจอเพิ่ม ก็นับความพยายาม
         if not take:
             attempts += 1
-            if attempts >= MAX_ATTEMPTS_IF_NOT_FULL:
+            if attempts >= MAX_ATTEMPTS:
                 break
             continue
 
-        # เติมคลิปโดยล็อกไม่ให้เกินเพดาน
         take = take[:space_left]
         selected.extend(take)
-
-        # ถ้ามีเพิ่ม → ล้างตัวนับ เพราะถือว่าหาเจอ
         attempts = 0
-
-        if len(selected) >= MAX_CLIPS:
-            break
 
     def download_task(i, total, vid_id, url):
         dest_path = download_dir / f"{vid_id}.mp4"
         download(url, dest_path)
         return dest_path
-    
-    # 3. โหลดและอัปเดตประวัติ (แบบ parallel)
+
     total_files = len(selected)
     results = []
     with ThreadPoolExecutor(max_workers=5) as executor:
@@ -195,13 +181,12 @@ def run_pixabay():
             except Exception as e:
                 results.append((i, total, f"Fail: {e}"))
 
-    # เรียงตาม i ก่อนแสดงผล
     for i, total, path in sorted(results, key=lambda x: x[0]):
         print(f"✅ Download success!! ({i}/{total}): {path}")
 
     save_json(history_file, sorted(list(seen_ids)))
-    save_json(unused_file, unused_list)  # ถ้ามี unused_list เหลือ
-    return True
+    save_json(unused_file, unused_list)
+
 
 if __name__ == "__main__":
-    run_pixabay()
+    run_pexels()
