@@ -7,11 +7,11 @@ import sys, os
 
 load_dotenv()
 
-def safe_run_pixabay():
+def safe_run_pexels():
     try:
         return run_pexels()
     except Exception as e:
-        print(f"❌ run_pixabay() failed: {e}")
+        print(f"❌ run_pexels() failed: {e}")
         return False
 
 def safe_run_upload():
@@ -27,7 +27,7 @@ print("YT_API:", bool(os.getenv("YT_API")))
 if __name__ == "__main__":
     try:
         print("🔍 Starting bot...")
-        if run_pexels():
+        if safe_run_pexels():
             print("🖼️ Image step passed")
             video_edit()
             print("🎬 Video edited")
