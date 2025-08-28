@@ -11,7 +11,7 @@ load_dotenv()
 API_KEY = os.getenv("PEXELS_API") or os.environ.get("PEXELS_API")
 
 # Queries ที่จะสุ่มค้น
-queries = ["Galaxy"]
+queries = ["Galaxy", "Animals", "Nature", "View"]
 needed = 10
 download_dir = Path("src/bg")
 download_dir.mkdir(exist_ok=True)
