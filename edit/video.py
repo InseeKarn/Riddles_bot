@@ -2,16 +2,18 @@ from moviepy.editor import *
 from moviepy.audio.fx.all import audio_loop
 from PIL import Image, ImageDraw
 from gtts import gTTS
+from ollama import get_data
 
 import numpy as np
 import moviepy.video.fx.all as afx
 import moviepy.config as mpconfig
-import os, shutil,gemini
+import os, shutil
 
 
 mpconfig.change_settings({"IMAGEMAGICK_BINARY": r"E:\\ImageMagick-7.1.2-Q16-HDRI\\magick.exe"})
 
-data = gemini.get_data() 
+data = get_data()
+
 
 def create_clip(hook, opt1, opt2, opt3, answer,
                      bg_video_path, music_file_path, sfx_file_path):
@@ -89,7 +91,7 @@ def create_clip(hook, opt1, opt2, opt3, answer,
     text_with_answer = (
         f"{hook}\n\n"
         f"1) {opt1}\n2) {opt2}\n3) {opt3}\n\n"
-        f"✅ Answer: Option {answer_display}"
+        f"✅ Answer: {answer_display}"
     )
 
     txt_clip_after = TextClip(
@@ -144,27 +146,39 @@ def create_clip(hook, opt1, opt2, opt3, answer,
     # --- รวมวิดีโอ + เสียง ---
     final_clip = CompositeVideoClip([bg, text_with_bg]).set_audio(final_audio)
 
+
+    
     return final_clip
 
 # ===== สร้างคลิป =====
-row = gemini.get_data()
+row = get_data()
 clip = create_clip(*row,
     bg_video_path="src/bg/background.mp4",
     music_file_path=r"src\musics\download.mp3",
     sfx_file_path=r"src\sound_effects\clock-ticking-sound-effect-240503.mp3"
 )
 
+# เก็บ reference กัน GC
+clip._keep_refs = row  # หรือจะเก็บ list ของ clips ย่อยใน create_clip แล้ว return มาด้วยก็ได้
+
 os.makedirs("src/outputs", exist_ok=True)
 clip.write_videofile("src/outputs/quiz_shorts.mp4", fps=30)
 
-# --- ลบไฟล์ background.mp4 หลังตัดเสร็จ ---
+# ปิด clip เพื่อปลดล็อกไฟล์
 clip.close()
+
+# --- ลบไฟล์ background.mp4 หลังตัดเสร็จ ---
 bg_path = "src/bg/background.mp4"
 if os.path.exists(bg_path):
     try:
         os.remove(bg_path)
-        print(f"Deleated {bg_path} successful✅")
+        print(f"Deleted {bg_path} successful ✅")
     except Exception as e:
-        print(f"Cannot deleate {bg_path}: {e}❌")
+        print(f"Cannot delete {bg_path}: {e} ❌")
 
+# ลบโฟลเดอร์ TTS
 shutil.rmtree("src/tts", ignore_errors=True)
+
+
+if __name__ == "__main__":
+    create_clip()
