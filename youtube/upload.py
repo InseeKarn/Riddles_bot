@@ -87,19 +87,15 @@ def upload_video(file_path, title, description,
 
     # print(youtube_api)
 def run_upload():
-    raw_title = """120FPS 
-    #shorts #ytshorts #viralshorts #trending #fyp #space 
-    #universe #galaxy #cosmos #nasa #milkyway #nebula #stars 
-    #blackhole #interstellar #astrophotography #spacelover 
-    #astronomy #cosmicbeauty #spaceexploration #amazinguniverse 
-    #spaceart #beautifulspace #outerspace #spacefacts #science"""
+    raw_title = """Only 1% Can Get This Right! 😱 | #shorts #quiz #quiztime #hardquiz #challenge 
+    #viralquiz #quizfun #quizchallenge #trivia #testyourknowledge #foryoupage #mindgames"""
 
     
     clean_title = " ".join(raw_title.split())
     # x <= 100 ตัว
     clean_title = clean_title[:100]
 
-    file_path = "src\\outputs\\final_video_.mp4"
+    file_path = "src\\outputs\\quiz_shorts.mp4"
     video_url = upload_video(
         file_path= file_path,
         title=clean_title,
