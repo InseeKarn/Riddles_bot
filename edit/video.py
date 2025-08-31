@@ -7,9 +7,12 @@ from .riddles_gen import get_data
 import numpy as np
 import moviepy.video.fx.all as afx
 import moviepy.config as mpconfig
-import os, shutil
+import os, shutil, platform
 
-mpconfig.change_settings({"IMAGEMAGICK_BINARY": r"E:\\ImageMagick-7.1.2-Q16-HDRI\\magick.exe"})
+if platform.system() == "Windows":
+    mpconfig.change_settings({
+        "IMAGEMAGICK_BINARY": r"E:\\ImageMagick-7.1.2-Q16-HDRI\\magick.exe"
+    })
 
 def create_clip(hook, answer, bg_video_path, music_file_path, sfx_file_path):
 
