@@ -33,5 +33,35 @@ jobs:
       - name: Install ImageMagick
         run: sudo apt-get update && sudo apt-get install -y imagemagick
 
+        # ✅ ไฟล์ว่าง
+      - name: Create empty state files if missing
+        run: |
+          [ -f token.json ] || echo "{}" > token.json
+
+      - name: Create credentials.json
+        if: ${{ env.HAS_CRED }}
+        run: printf '%s' '${{ secrets.YT_CREDENTIALS }}' > credentials.json
+
+        # ✅ token.json (สร้างถ้ามี secret)
+      - name: Create token.json
+        if: ${{ env.HAS_TOKEN }}
+        run: printf '%s' '${{ secrets.TOKEN_JSON }}' > token.json
+
+      # ✅ Validate JSON
+      - name: Validate JSON files
+        run: |
+          python -m json.tool credentials.json > /dev/null
+          python -m json.tool token.json > /dev/null
+
       - name: Run Daily Bot
         run: python main.py
+
+
+      # ✅ Save state
+      - name: Save initial state files
+        uses: actions/upload-artifact@v4
+        with:
+          name: state-files
+          path: |
+            token.json
+            credentials.json
