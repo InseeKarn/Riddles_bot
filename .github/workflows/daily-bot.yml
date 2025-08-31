@@ -31,7 +31,10 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Install ImageMagick
-        run: sudo apt-get update && sudo apt-get install -y imagemagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+          sudo sed -i 's|rights="none"|rights="read|write"|g' /etc/ImageMagick-6/policy.xml
 
         # ✅ ไฟล์ว่าง
       - name: Create empty state files if missing
