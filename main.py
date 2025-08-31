@@ -1,38 +1,27 @@
-from edit.images import run_pexels
-from edit.video import video_edit
+from edit.images import get_one_random_video
+from edit.video import build_quiz_clip
 from youtube.upload import run_upload
 from notify.discord import discord_message
 from dotenv import load_dotenv
-import sys, os
+import os
 
 load_dotenv()
 
-def safe_run_pexels():
-    try:
-        return run_pexels()
-    except Exception as e:
-        print(f"❌ run_pexels() failed: {e}")
-        return False
-
-def safe_run_upload():
-    try:
-        return run_upload()
-    except Exception as e:
-        print(f"❌ run_upload() failed: {e}")
-        return None
-
 print("PEXELS_API:", bool(os.getenv("PEXELS_API")))
 print("YT_API:", bool(os.getenv("YT_API")))
+bg_path = "src\\bg\\background.mp4"
 
 if __name__ == "__main__":
     try:
         print("🔍 Starting bot...")
-        if safe_run_pexels():
-            print("🖼️ Image step passed")
-            video_edit()
+        video_path = get_one_random_video()
+        if video_path:
+            print("🖼️ Videos step pass")
+            build_quiz_clip()
             print("🎬 Video edited")
-            video_url = safe_run_upload()
+            video_url = run_upload()
             if video_url:
+                print("upload step pass")
                 user_id = "304548816907010050"
                 discord_message(f"✅ <@{user_id}> Uploaded vids: {video_url} ✅")
             else:
@@ -40,7 +29,9 @@ if __name__ == "__main__":
         else:
             print("⚠️ Pexels step failed, skipping video/edit/upload")
 
-        sys.exit(0)  # ✅ จบด้วย success เสมอ
-
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
+
+
+
+

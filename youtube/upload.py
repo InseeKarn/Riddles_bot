@@ -87,7 +87,7 @@ def upload_video(file_path, title, description,
 
     # print(youtube_api)
 def run_upload():
-    raw_title = """Only 1% Can Get This Right! 😱 | #shorts #quiz #quiztime #hardquiz #challenge 
+    raw_title = """riddles #shorts #quiz #quiztime #hardquiz #challenge 
     #viralquiz #quizfun #quizchallenge #trivia #testyourknowledge #foryoupage #mindgames"""
 
     

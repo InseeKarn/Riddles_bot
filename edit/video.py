@@ -2,100 +2,72 @@ from moviepy.editor import *
 from moviepy.audio.fx.all import audio_loop
 from PIL import Image, ImageDraw
 from gtts import gTTS
-from ollama import get_data
+from .riddles_gen import get_data
 
 import numpy as np
 import moviepy.video.fx.all as afx
 import moviepy.config as mpconfig
 import os, shutil
 
-
 mpconfig.change_settings({"IMAGEMAGICK_BINARY": r"E:\\ImageMagick-7.1.2-Q16-HDRI\\magick.exe"})
 
-data = get_data()
-
-
-def create_clip(hook, opt1, opt2, opt3, answer,
-                     bg_video_path, music_file_path, sfx_file_path):
+def create_clip(hook, answer, bg_video_path, music_file_path, sfx_file_path):
 
     os.makedirs("src/tts", exist_ok=True)
 
-    # --- สร้าง TTS แยกเป็นช่วง ---
-    before_opt3_path = "src/tts/before_opt3.mp3"
-    opt3_path = "src/tts/opt3.mp3"
+    # --- สร้าง TTS ---
+    hook_path = "src/tts/hook.mp3"
     answer_path = "src/tts/answer.mp3"
 
-    gTTS(text=f"{hook}. {opt1}. {opt2}.", lang='en').save(before_opt3_path)
-    gTTS(text=f"{opt3}", lang='en').save(opt3_path)
+    gTTS(text=hook, lang='en').save(hook_path)
     gTTS(text=f"The answer is {answer}", lang='en').save(answer_path)
 
-    speed_factor = 1.2  # ปรับความเร็วที่นี่
-    before_opt3_clip = AudioFileClip(before_opt3_path).fx(afx.speedx, speed_factor)
-    opt3_clip        = AudioFileClip(opt3_path).fx(afx.speedx, speed_factor)
-    answer_clip      = AudioFileClip(answer_path).fx(afx.speedx, speed_factor)
-
+    speed_factor = 1.3
+    hook_clip = AudioFileClip(hook_path).fx(afx.speedx, speed_factor)
+    answer_clip = AudioFileClip(answer_path).fx(afx.speedx, speed_factor)
 
     # --- คำนวณเวลา ---
     sfx_duration = 3.0
-    sfx_start_time = before_opt3_clip.duration + opt3_clip.duration + 0.1
-    answer_start_time = sfx_start_time + sfx_duration
+    hook_duration = hook_clip.duration + 0.1
+    answer_start_time = hook_duration + sfx_duration
     end_time = answer_start_time + answer_clip.duration + 0.2
 
     # --- narration ---
-    silence_after_opt3 = AudioClip(lambda t: 0, duration=0.1)
+    silence_after_hook = AudioClip(lambda t: 0, duration=0.1)
     silence_for_sfx = AudioClip(lambda t: 0, duration=sfx_duration)
-    silence_after_answer = AudioClip(lambda t: 0, duration=0.2)
+    silence_after_answer = AudioClip(lambda t: 0, duration=0.1)
 
     narration = concatenate_audioclips([
-        before_opt3_clip,
-        opt3_clip,
-        silence_after_opt3,
+        hook_clip,
+        silence_after_hook,
         silence_for_sfx,
         answer_clip,
         silence_after_answer
     ])
 
-    # --- สร้าง SFX ---
-    sfx = AudioFileClip(sfx_file_path).volumex(0.5)
-    sfx = audio_loop(sfx, duration=sfx_duration).set_start(sfx_start_time)
+    # --- SFX ---
+    sfx = AudioFileClip(sfx_file_path).volumex(0.3)
+    sfx = audio_loop(sfx, duration=sfx_duration).set_start(hook_duration)
 
-    # --- พื้นหลัง 1080x1920 และ loop ถ้าสั้น ---
+    # --- พื้นหลัง ---
     bg = VideoFileClip(bg_video_path).resize((1080, 1920))
     if bg.duration < end_time:
         loop_count = int(end_time // bg.duration) + 1
         bg = concatenate_videoclips([bg] * loop_count)
     bg = bg.subclip(0, end_time)
 
-    # --- ข้อความบนจอ (ไม่มีคำตอบ) ---
-    text_before_answer = f"{hook}\n\n1) {opt1}\n2) {opt2}\n3) {opt3}"
+    # --- ข้อความบนจอ ---
     txt_clip_before = TextClip(
-        text_before_answer,
+        hook,
         fontsize=60,
         color='white',
         size=(1000, 1600),
         method='caption',
         align='center'
-    ).set_duration(answer_start_time)  # จบก่อนเฉลยเริ่ม
-
-    # --- ข้อความบนจอ (มีคำตอบ) ---
-    # หาหมายเลขคำตอบ
-    if answer == opt1:
-        answer_display = f"{opt1}"
-    elif answer == opt2:
-        answer_display = f"{opt2}"
-    elif answer == opt3:
-        answer_display = f"{opt3}"
-    else:
-        answer_display = answer  # fallback ถ้าไม่ตรง
-
-    text_with_answer = (
-        f"{hook}\n\n"
-        f"1) {opt1}\n2) {opt2}\n3) {opt3}\n\n"
-        f"✅ Answer: {answer_display}"
-    )
+    ).set_duration(answer_start_time)
 
     txt_clip_after = TextClip(
-        text_with_answer,
+        f"{hook}\n\n✅ Answer: {answer}",
         fontsize=60,
         color='white',
         size=(1000, 1600),
@@ -105,40 +77,32 @@ def create_clip(hook, opt1, opt2, opt3, answer,
 
     # --- กล่องพื้นหลังโปร่งแสง ---
     padding = 40
-    box_w = txt_clip_before.w + padding
-    box_h = txt_clip_before.h + padding
-    corner_radius = 30
-
+    scale_factor = 0.9
+    box_w = int((txt_clip_before.w + padding) * scale_factor)
+    box_h = int((txt_clip_before.h + padding) * scale_factor)
+    corner_radius = 40
+    alpha = 0.35
     img = Image.new("RGBA", (box_w, box_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     draw.rounded_rectangle(
         [(0, 0), (box_w, box_h)],
         radius=corner_radius,
-        fill=(0, 0, 0, int(255 * 0.5))
+        fill=(0, 0, 0, int(255 * alpha))
     )
+
     bg_box_before = ImageClip(np.array(img)).set_duration(answer_start_time)
     bg_box_after = ImageClip(np.array(img)).set_start(answer_start_time).set_duration(end_time - answer_start_time)
 
-    # --- จัดตำแหน่งให้อยู่กลางจอ ---
-    bg_box_before = bg_box_before.set_position('center')
-    txt_clip_before = txt_clip_before.set_position('center')
-    bg_box_after = bg_box_after.set_position('center')
-    txt_clip_after = txt_clip_after.set_position('center')
-
     # --- รวมข้อความ + กล่อง ---
     text_with_bg = CompositeVideoClip([
-        bg_box_before,
-        txt_clip_before,
-        bg_box_after,
-        txt_clip_after
+        bg_box_before.set_position('center'),
+        txt_clip_before.set_position('center'),
+        bg_box_after.set_position('center'),
+        txt_clip_after.set_position('center')
     ], size=(1080, 1920))
 
     # --- เพลงประกอบ ---
     music = AudioFileClip(music_file_path).volumex(0.2).set_duration(end_time)
-
-    # --- เสียงนาฬิกา ---
-    sfx = AudioFileClip(sfx_file_path).volumex(0.3)
-    sfx = audio_loop(sfx, duration=sfx_duration).set_start(sfx_start_time)
 
     # --- รวมเสียงทั้งหมด ---
     final_audio = CompositeAudioClip([narration, music, sfx])
@@ -147,38 +111,41 @@ def create_clip(hook, opt1, opt2, opt3, answer,
     final_clip = CompositeVideoClip([bg, text_with_bg]).set_audio(final_audio)
 
 
-    
     return final_clip
 
-# ===== สร้างคลิป =====
-row = get_data()
-clip = create_clip(*row,
-    bg_video_path="src/bg/background.mp4",
-    music_file_path=r"src\musics\download.mp3",
-    sfx_file_path=r"src\sound_effects\clock-ticking-sound-effect-240503.mp3"
-)
+# # ===== สร้างคลิป =====
+# hook, answer = get_data()  # ต้องให้ get_data() return แค่ 2 ค่า
+# clip = create_clip(
+#     hook,
+#     answer,
+#     bg_video_path="src/bg/background.mp4",
+#     music_file_path=r"src\musics\download.mp3",
+#     sfx_file_path=r"src\sound_effects\clock-ticking-sound-effect-240503.mp3"
+# )
 
-# เก็บ reference กัน GC
-clip._keep_refs = row  # หรือจะเก็บ list ของ clips ย่อยใน create_clip แล้ว return มาด้วยก็ได้
+# os.makedirs("src/outputs", exist_ok=True)
+# clip.write_videofile("src/outputs/quiz_shorts.mp4", fps=30)
+# clip.close()
 
-os.makedirs("src/outputs", exist_ok=True)
-clip.write_videofile("src/outputs/quiz_shorts.mp4", fps=30)
+# shutil.rmtree("src/tts", ignore_errors=True)
 
-# ปิด clip เพื่อปลดล็อกไฟล์
-clip.close()
+def build_quiz_clip():
+    hook, answer = get_data()  # ต้องให้ get_data() return แค่ 2 ค่า
+    clip = create_clip(
+        hook,
+        answer,
+        bg_video_path="src/bg/background.mp4",
+        music_file_path=r"src\\musics\\download.mp3",
+        sfx_file_path=r"src\\sound_effects\\clock-ticking-sound-effect-240503.mp3"
+    )
 
-# --- ลบไฟล์ background.mp4 หลังตัดเสร็จ ---
-bg_path = "src/bg/background.mp4"
-if os.path.exists(bg_path):
-    try:
-        os.remove(bg_path)
-        print(f"Deleted {bg_path} successful ✅")
-    except Exception as e:
-        print(f"Cannot delete {bg_path}: {e} ❌")
+    os.makedirs("src/outputs", exist_ok=True)
+    clip.write_videofile("src/outputs/quiz_shorts.mp4", fps=30)
+    clip.close()
+    shutil.rmtree("src/tts", ignore_errors=True)
 
-# ลบโฟลเดอร์ TTS
-shutil.rmtree("src/tts", ignore_errors=True)
+    return "src/outputs/quiz_shorts.mp4"
 
 
 if __name__ == "__main__":
-    create_clip()
+    build_quiz_clip()

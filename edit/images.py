@@ -39,7 +39,6 @@ def get_one_random_video():
 
     # สุ่มเลือกคลิป
     vid = random.choice(videos)
-    vid_id = vid["id"]
 
     # หาไฟล์ที่ความละเอียดสูงสุด
     best_file = max(vid["video_files"], key=lambda f: f.get("width", 0))

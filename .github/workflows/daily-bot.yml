@@ -2,12 +2,8 @@ name: Daily Bot
 
 on:
   schedule:
-      - cron: "0 3,7,11,15,19,23 * * *"  # รันทุก 4 ชม. ตามเวลาไทย
-      # - cron: "0 3 * * *"    # 10:00 ไทย
-      # - cron: "0 7 * * *"    # 14:00 ไทย
-      # - cron: "0 17 * * *"   # 06:00 ไทย
-      # - cron: "0 23 * * *"   # 00:00 ไทย   # 06:00 เวลาไทย (23:00 UTC)
-  workflow_dispatch:      # รันเองได้จากหน้าเว็บ
+    - cron: "0 3,7,11,15,19,23 * * *"  # รันทุก 4 ชั่วโมงตามเวลาไทย
+  workflow_dispatch:  # รันเองได้จากหน้าเว็บ
 
 jobs:
   run-bot:
@@ -18,99 +14,21 @@ jobs:
       YT_PRIVACY: ${{ secrets.YT_PRIVACY }}
       YT_CATEGORY: ${{ secrets.YT_CATEGORY }}
       DIS_AUTH: ${{ secrets.DIS_AUTH }}
-      UNS_ACCESS: ${{ secrets.UNS_ACCESS }}
-      UNS_SECRET: ${{ secrets.UNS_SECRET }}
-      UNS_APPID: ${{ secrets.UNS_APPID }}
-      PIXA_API: ${{ secrets.PIXA_API }}
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
       HAS_CRED: ${{ secrets.YT_CREDENTIALS != '' }}
       HAS_TOKEN: ${{ secrets.TOKEN_JSON != '' }}
-      
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-    - name: Install dependencies
-      run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-    # ✅ ดึง state
-    - name: Restore state files
-      uses: actions/download-artifact@v4
-      with:
-        name: state-files
-        path: .
-      continue-on-error: true
-
-    # ✅ ไฟล์ว่าง
-    - name: Create empty state files if missing
-      run: |
-        [ -f downloaded_not_edited.json ] || echo "[]" > downloaded_not_edited.json
-        [ -f pixabay_blocked.json ] || echo "[]" > pixabay_blocked.json
-        [ -f token.json ] || echo "{}" > token.json
-        [ -f pixabay_seen.json ] || echo "[]" > pixabay_seen.json
-    
-      # 🛑 เช็ก block ก่อนรัน (ข้ามถ้าเป็น cron และยังไม่ครบ 24 ชม.)
-    - name: Check upload block
-      run: |
-        if [ "${{ github.event_name }}" = "schedule" ] && [ -f upload_block_until.txt ]; then
-          until_ts=$(cat upload_block_until.txt)
-          now_ts=$(date +%s)
-          if [ "$now_ts" -lt "$until_ts" ]; then
-            echo "⏳ ยังอยู่ในช่วงบล็อกอัปโหลด ข้ามการรัน"
-            exit 0
-          fi
-        fi
-
-  
-    # ✅ credentials.json (สร้างถ้ามี secret)
-    - name: Create credentials.json
-      if: ${{ env.HAS_CRED }}
-      run: printf '%s' '${{ secrets.YT_CREDENTIALS }}' > credentials.json
-
-    # ✅ token.json (สร้างถ้ามี secret)
-    - name: Create token.json
-      if: ${{ env.HAS_TOKEN }}
-      run: printf '%s' '${{ secrets.TOKEN_JSON }}' > token.json
-
-    # ✅ Validate JSON
-    - name: Validate JSON files
-      run: |
-        python -m json.tool credentials.json > /dev/null
-        python -m json.tool token.json > /dev/null
-
-    - name: Run script and set block if limit hit
-      run: |
-        set -e
-        python main.py 2>&1 | tee run.log || true
-
-        if grep -q "uploadLimitExceeded" run.log; then
-          echo "Found YouTube upload limit → Block 24 hr."
-          date -u +"%Y-%m-%d %H:%M:%S UTC"
-          echo $(( $(date +%s) + 86400 )) > upload_block_until.txt
-          exit 0
-          
-          # Notify Discord
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{\"content\": \"⚠️ Upload Limit Detected — Blocked until $(date -d '+24 hours' '+%Y-%m-%d %H:%M:%S %Z')\"}" \
-               "$DISCORD_WEBHOOK_URL"
-        fi
-
-    # ✅ Save state
-    - name: Save initial state files
-      uses: actions/upload-artifact@v4
-      with:
-        name: state-files
-        path: |
-          downloaded_not_edited.json
-          pixabay_blocked.json
-          token.json
-          pixabay_seen.json
-          pixabay_blocked.json
-          token.json
-          pixabay_seen.json
+      - name: Run Daily Bot
+        run: python main.py
