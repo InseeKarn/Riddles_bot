@@ -31,7 +31,11 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Install ImageMagick
-        run: sudo apt-get update && sudo apt-get install -y imagemagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+          # แก้ policy เพื่อ allow coder text
+          sudo sed -i 's|rights="none"|rights="read|write"|g' /etc/ImageMagick-6/policy.xml
 
       - name: Run Daily Bot
         run: python main.py
