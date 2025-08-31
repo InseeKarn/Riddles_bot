@@ -94,7 +94,7 @@ def run_upload():
     # x <= 100 ตัว
     clean_title = clean_title[:100]
 
-    file_path = "src\\outputs\\quiz_shorts.mp4"
+    file_path = "src/outputs/quiz_shorts.mp4"
     video_url = upload_video(
         file_path= file_path,
         title=clean_title,
