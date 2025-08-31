@@ -113,30 +113,14 @@ def create_clip(hook, answer, bg_video_path, music_file_path, sfx_file_path):
 
     return final_clip
 
-# # ===== สร้างคลิป =====
-# hook, answer = get_data()  # ต้องให้ get_data() return แค่ 2 ค่า
-# clip = create_clip(
-#     hook,
-#     answer,
-#     bg_video_path="src/bg/background.mp4",
-#     music_file_path=r"src\musics\download.mp3",
-#     sfx_file_path=r"src\sound_effects\clock-ticking-sound-effect-240503.mp3"
-# )
-
-# os.makedirs("src/outputs", exist_ok=True)
-# clip.write_videofile("src/outputs/quiz_shorts.mp4", fps=30)
-# clip.close()
-
-# shutil.rmtree("src/tts", ignore_errors=True)
-
 def build_quiz_clip():
     hook, answer = get_data()  # ต้องให้ get_data() return แค่ 2 ค่า
     clip = create_clip(
         hook,
         answer,
         bg_video_path="src/bg/background.mp4",
-        music_file_path=r"src\\musics\\download.mp3",
-        sfx_file_path=r"src\\sound_effects\\clock-ticking-sound-effect-240503.mp3"
+        music_file_path="src/musics/download.mp3",
+        sfx_file_path="src/sound_effects/clock-ticking.mp3"
     )
 
     os.makedirs("src/outputs", exist_ok=True)
