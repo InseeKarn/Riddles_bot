@@ -2,6 +2,7 @@ from moviepy.editor import *
 from moviepy.audio.fx.all import audio_loop
 from PIL import Image, ImageDraw
 from gtts import gTTS
+# from riddles_gen import get_data
 from .riddles_gen import get_data
 
 import numpy as np
@@ -14,43 +15,31 @@ if platform.system() == "Windows":
         "IMAGEMAGICK_BINARY": r"E:\\ImageMagick-7.1.2-Q16-HDRI\\magick.exe"
     })
 
-def create_clip(hook, answer, bg_video_path, music_file_path, sfx_file_path):
+def create_clip(hook, bg_video_path, music_file_path):
 
     os.makedirs("src/tts", exist_ok=True)
 
     # --- สร้าง TTS ---
     hook_path = "src/tts/hook.mp3"
-    answer_path = "src/tts/answer.mp3"
+    comment_path = "src/tts/comment.mp3"
 
     gTTS(text=hook, lang='en').save(hook_path)
-    gTTS(text=f"The answer is {answer}", lang='en').save(answer_path)
+    gTTS(text="Comment your answer", lang='en').save(comment_path)
 
     speed_factor = 1.3
     hook_clip = AudioFileClip(hook_path).fx(afx.speedx, speed_factor)
-    answer_clip = AudioFileClip(answer_path).fx(afx.speedx, speed_factor)
+    comment_clip = AudioFileClip(comment_path).fx(afx.speedx, speed_factor)
 
     # --- คำนวณเวลา ---
-    sfx_duration = 3.0
     hook_duration = hook_clip.duration + 0.1
-    answer_start_time = hook_duration + sfx_duration
-    end_time = answer_start_time + answer_clip.duration + 0.2
+    comment_duration = comment_clip.duration + 0.1
+    end_time = hook_duration + 0.1 + comment_duration
 
     # --- narration ---
-    silence_after_hook = AudioClip(lambda t: 0, duration=0.1)
-    silence_for_sfx = AudioClip(lambda t: 0, duration=sfx_duration)
-    silence_after_answer = AudioClip(lambda t: 0, duration=0.1)
-
     narration = concatenate_audioclips([
         hook_clip,
-        silence_after_hook,
-        silence_for_sfx,
-        answer_clip,
-        silence_after_answer
+        comment_clip
     ])
-
-    # --- SFX ---
-    sfx = AudioFileClip(sfx_file_path).volumex(0.3)
-    sfx = audio_loop(sfx, duration=sfx_duration).set_start(hook_duration)
 
     # --- พื้นหลัง ---
     bg = VideoFileClip(bg_video_path).resize((1080, 1920))
@@ -60,23 +49,25 @@ def create_clip(hook, answer, bg_video_path, music_file_path, sfx_file_path):
     bg = bg.subclip(0, end_time)
 
     # --- ข้อความบนจอ ---
+    # เว้นช่องว่างระหว่างตัวอักษร
+
     txt_clip_before = TextClip(
-        hook,
+        f"🤔 R i d d l e 🤔\n\n{hook}\n\n",
         fontsize=60,
         color='white',
-        size=(1000, 1600),
+        size=(950, 1600),
         method='caption',
         align='center'
-    ).set_duration(answer_start_time)
+    ).set_duration(hook_duration)
 
     txt_clip_after = TextClip(
-        f"{hook}\n\n✅ Answer: {answer}",
+        f"🤔 R i d d l e 🤔\n\n{hook}\n\n❗ C o m m e n t  y o u r  A n s w e r ❗",
         fontsize=60,
         color='white',
-        size=(1000, 1600),
+        size=(950, 1600),
         method='caption',
-        align='center'
-    ).set_start(answer_start_time).set_duration(end_time - answer_start_time)
+        align='center',
+    ).set_start(hook_duration + 0.1).set_duration(comment_duration)
 
     # --- กล่องพื้นหลังโปร่งแสง ---
     padding = 40
@@ -93,8 +84,8 @@ def create_clip(hook, answer, bg_video_path, music_file_path, sfx_file_path):
         fill=(0, 0, 0, int(255 * alpha))
     )
 
-    bg_box_before = ImageClip(np.array(img)).set_duration(answer_start_time)
-    bg_box_after = ImageClip(np.array(img)).set_start(answer_start_time).set_duration(end_time - answer_start_time)
+    bg_box_before = ImageClip(np.array(img)).set_duration(hook_duration)
+    bg_box_after = ImageClip(np.array(img)).set_start(hook_duration).set_duration(comment_duration)
 
     # --- รวมข้อความ + กล่อง ---
     text_with_bg = CompositeVideoClip([
@@ -108,22 +99,27 @@ def create_clip(hook, answer, bg_video_path, music_file_path, sfx_file_path):
     music = AudioFileClip(music_file_path).volumex(0.2).set_duration(end_time)
 
     # --- รวมเสียงทั้งหมด ---
-    final_audio = CompositeAudioClip([narration, music, sfx])
+    final_audio = CompositeAudioClip([narration, music])
 
     # --- รวมวิดีโอ + เสียง ---
     final_clip = CompositeVideoClip([bg, text_with_bg]).set_audio(final_audio)
 
-
     return final_clip
 
+import random
 def build_quiz_clip():
-    hook, answer = get_data()  # ต้องให้ get_data() return แค่ 2 ค่า
+    hook = get_data()  # ต้อง return แค่ข้อความ hook
+    hook_text = hook[0] if isinstance(hook, list) else hook
+
+    music_dir = "src/musics"
+    music_files = [f for f in os.listdir(music_dir) if f.endswith((".mp3"))]
+
+    random_music = os.path.join(music_dir, random.choice(music_files))
+
     clip = create_clip(
-        hook,
-        answer,
+        hook_text,
         bg_video_path="src/bg/background.mp4",
-        music_file_path="src/musics/download.mp3",
-        sfx_file_path="src/sound_effects/clock-ticking.mp3"
+        music_file_path=random_music,
     )
 
     os.makedirs("src/outputs", exist_ok=True)
