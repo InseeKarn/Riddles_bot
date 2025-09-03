@@ -2,8 +2,8 @@ from moviepy.editor import *
 from moviepy.audio.fx.all import audio_loop
 from PIL import Image, ImageDraw
 from gtts import gTTS
-# from riddles_gen import get_data
-from .riddles_gen import get_data
+from riddles_gen import get_data
+# from .riddles_gen import get_data
 
 import numpy as np
 import moviepy.video.fx.all as afx
@@ -21,22 +21,28 @@ def create_clip(hook, bg_video_path, music_file_path):
 
     # --- สร้าง TTS ---
     hook_path = "src/tts/hook.mp3"
-    comment_path = "src/tts/comment.mp3"
+    your_answer = "src/tts/your answer.mp3"
+    comment_path2 = "src/tts/comment.mp3"
 
+    gTTS(text="your answer", lang='en').save(your_answer)
+    gTTS(text="Comment", lang='en').save(comment_path2)
     gTTS(text=hook, lang='en').save(hook_path)
-    gTTS(text="Comment your answer", lang='en').save(comment_path)
+    
 
     speed_factor = 1.3
     hook_clip = AudioFileClip(hook_path).fx(afx.speedx, speed_factor)
-    comment_clip = AudioFileClip(comment_path).fx(afx.speedx, speed_factor)
+    your_answer_clip = AudioFileClip(your_answer).fx(afx.speedx, speed_factor)
+    comment_clip = AudioFileClip(comment_path2).fx(afx.speedx, speed_factor)
 
     # --- คำนวณเวลา ---
+    your_answer_duration = your_answer_clip.duration
     hook_duration = hook_clip.duration + 0.1
-    comment_duration = comment_clip.duration + 0.1
-    end_time = hook_duration + 0.1 + comment_duration
+    comment_duration = comment_clip.duration
+    end_time = your_answer_duration + hook_duration + comment_duration
 
     # --- narration ---
     narration = concatenate_audioclips([
+        your_answer_clip,
         hook_clip,
         comment_clip
     ])
@@ -47,53 +53,52 @@ def create_clip(hook, bg_video_path, music_file_path):
         loop_count = int(end_time // bg.duration) + 1
         bg = concatenate_videoclips([bg] * loop_count)
     bg = bg.subclip(0, end_time)
+    w, h = bg.size
 
     # --- ข้อความบนจอ ---
-    # เว้นช่องว่างระหว่างตัวอักษร
-
-    txt_clip_before = TextClip(
-        f"🤔 R i d d l e 🤔\n\n{hook}\n\n",
-        fontsize=60,
-        color='white',
-        size=(950, 1600),
-        method='caption',
-        align='center'
-    ).set_duration(hook_duration)
-
-    txt_clip_after = TextClip(
-        f"🤔 R i d d l e 🤔\n\n{hook}\n\n❗ C o m m e n t  y o u r  A n s w e r ❗",
-        fontsize=60,
-        color='white',
-        size=(950, 1600),
+    font = "src/fonts/bold_font.ttf"
+    txt_title = TextClip(
+        "Riddle Time!",
+        fontsize=70,
+        font=font,
+        color='yellow',
         method='caption',
         align='center',
-    ).set_start(hook_duration + 0.1).set_duration(comment_duration)
+        size=(950, None)
+    ).set_duration(end_time)
 
-    # --- กล่องพื้นหลังโปร่งแสง ---
-    padding = 40
-    scale_factor = 0.9
-    box_w = int((txt_clip_before.w + padding) * scale_factor)
-    box_h = int((txt_clip_before.h + padding) * scale_factor)
-    corner_radius = 40
-    alpha = 0.35
-    img = Image.new("RGBA", (box_w, box_h), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle(
-        [(0, 0), (box_w, box_h)],
-        radius=corner_radius,
-        fill=(0, 0, 0, int(255 * alpha))
-    )
+    txt_hook = TextClip(
+        hook,
+        fontsize=60,
+        font=font,
+        color='white',
+        method='caption',
+        align='center',
+        size=(950, None)
+    ).set_duration(end_time)
 
-    bg_box_before = ImageClip(np.array(img)).set_duration(hook_duration)
-    bg_box_after = ImageClip(np.array(img)).set_start(hook_duration).set_duration(comment_duration)
+    txt_comment = TextClip(
+        "Comment your answer!",
+        fontsize=65,
+        font=font,
+        color='red',
+        method='caption',
+        align='center',
+        size=(950, None)
+    ).set_duration(end_time)
 
-    # --- รวมข้อความ + กล่อง ---
-    text_with_bg = CompositeVideoClip([
-        bg_box_before.set_position('center'),
-        txt_clip_before.set_position('center'),
-        bg_box_after.set_position('center'),
-        txt_clip_after.set_position('center')
+    # --- GIF แทน Emoji ---
+    gif_title = VideoFileClip("src/gifs/thinking.gif").set_duration(end_time).resize(height=200)
+    gif_comment = VideoFileClip("src/gifs/comment-3-5148.gif").set_duration(end_time).resize(height=200)
+
+    txt_clip = CompositeVideoClip([
+        txt_title.set_position(("center", 300)),
+        txt_hook.set_position(("center", 550)),
+        txt_comment.set_position(("center", 1400)),
+        gif_comment.set_position(("center", 1500)),
+        gif_title.set_position(("center", 80)),
     ], size=(1080, 1920))
+
 
     # --- เพลงประกอบ ---
     music = AudioFileClip(music_file_path).volumex(0.2).set_duration(end_time)
@@ -102,7 +107,7 @@ def create_clip(hook, bg_video_path, music_file_path):
     final_audio = CompositeAudioClip([narration, music])
 
     # --- รวมวิดีโอ + เสียง ---
-    final_clip = CompositeVideoClip([bg, text_with_bg]).set_audio(final_audio)
+    final_clip = CompositeVideoClip([bg, txt_clip]).set_audio(final_audio)
 
     return final_clip
 
