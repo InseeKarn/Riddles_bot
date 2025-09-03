@@ -1,9 +1,7 @@
 from moviepy.editor import *
-from moviepy.audio.fx.all import audio_loop
-from PIL import Image, ImageDraw
 from gtts import gTTS
-from riddles_gen import get_data
-# from .riddles_gen import get_data
+# from riddles_gen import get_data # Use to test on local
+from .riddles_gen import get_data # Use to run on Github workflows
 
 import numpy as np
 import moviepy.video.fx.all as afx

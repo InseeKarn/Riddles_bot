@@ -1,3 +1,5 @@
+# Dev by InseeKarn
+
 from edit.images import get_one_random_video
 from edit.video import build_quiz_clip
 from youtube.upload import run_upload
