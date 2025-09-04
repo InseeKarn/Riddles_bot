@@ -2,7 +2,8 @@ name: Riddle_bot Daily Bot
 
 on:
   schedule:
-    - cron: "0 3,12 * * *"  
+    - cron: "0 13 * * *"  # 09:00 ET
+    - cron: "0 0 * * *"  # 20:00 ET  
   workflow_dispatch:  
 
 jobs:
