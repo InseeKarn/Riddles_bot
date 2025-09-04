@@ -1,7 +1,7 @@
 from moviepy.editor import *
 from gtts import gTTS
-from riddles_gen import get_data # Use to test on local
-# from .riddles_gen import get_data # Use to run on Github workflows
+# from riddles_gen import get_data # Use to test on local
+from .riddles_gen import get_data # Use to run on Github workflows
 
 import numpy as np
 import moviepy.video.fx.all as afx

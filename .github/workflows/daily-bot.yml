@@ -1,4 +1,4 @@
-name: Daily Bot
+name: Riddle_bot Daily Bot
 
 on:
   schedule:
