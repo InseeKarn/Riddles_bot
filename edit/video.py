@@ -1,7 +1,7 @@
 from moviepy.editor import *
 from gtts import gTTS
-# from riddles_gen import get_data # Use to test on local
-from .riddles_gen import get_data # Use to run on Github workflows
+from riddles_gen import get_data # Use to test on local
+# from .riddles_gen import get_data # Use to run on Github workflows
 
 import numpy as np
 import moviepy.video.fx.all as afx
@@ -22,8 +22,8 @@ def create_clip(hook, bg_video_path, music_file_path):
     your_answer = "src/tts/your answer.mp3"
     comment_path2 = "src/tts/comment.mp3"
 
-    gTTS(text="your answer", lang='en').save(your_answer)
-    gTTS(text="Comment", lang='en').save(comment_path2)
+    gTTS(text="answer Smart enough to solve this?", lang='en').save(your_answer)
+    gTTS(text="Comment your", lang='en').save(comment_path2)
     gTTS(text=hook, lang='en').save(hook_path)
     
 
@@ -62,8 +62,18 @@ def create_clip(hook, bg_video_path, music_file_path):
         color='yellow',
         method='caption',
         align='center',
-        size=(950, None)
+        size=(900, None)
     ).set_duration(end_time)
+
+    txt_smart = TextClip(
+        "Smart enough to solve this?!",
+        fontsize=70,
+        font=font,
+        color='magenta',
+        method='label',
+        align='center',
+        size=(950, None)
+    ).set_duration(3)
 
     txt_hook = TextClip(
         hook,
@@ -92,6 +102,7 @@ def create_clip(hook, bg_video_path, music_file_path):
     txt_clip = CompositeVideoClip([
         txt_title.set_position(("center", 300)),
         txt_hook.set_position(("center", 550)),
+        txt_smart.set_position(("center", 450)),
         txt_comment.set_position(("center", 1400)),
         gif_comment.set_position(("center", 1500)),
         gif_title.set_position(("center", 80)),

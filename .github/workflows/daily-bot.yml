@@ -2,8 +2,8 @@ name: Daily Bot
 
 on:
   schedule:
-    - cron: "0 3,7,11,15,19,23 * * *"  # รันทุก 4 ชั่วโมงตามเวลาไทย
-  workflow_dispatch:  # รันเองได้จากหน้าเว็บ
+    - cron: "0 15 * * *"  
+  workflow_dispatch:  
 
 jobs:
   run-bot:

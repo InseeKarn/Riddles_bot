@@ -86,8 +86,7 @@ def upload_video(file_path, title, description,
 
     # print(youtube_api)
 def run_upload():
-    raw_title = """riddles #shorts #quiz #quiztime #hardquiz #challenge 
-    #viralquiz #quizfun #quizchallenge #trivia #testyourknowledge #foryoupage #mindgames"""
+    raw_title = """riddles #quiz #iqtest #challenge #fyp #shorts #vira'"""
 
     
     clean_title = " ".join(raw_title.split())
@@ -98,7 +97,10 @@ def run_upload():
     video_url = upload_video(
         file_path= file_path,
         title=clean_title,
-        description="120FPS"
+        description="""#riddles #riddlegame #quiztime #funquiz #puzzletime
+        #brainteaser #mindgames #quizchallenge #trivia #logicpuzzle
+        #fyp #shorts #viral #challenge #fun
+        """
     )
 
     # 🆕 Delete after uploaded
