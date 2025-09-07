@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_KEY = os.getenv("PEXELS_API")
-QUERY = "universe"  # หรือ "space", "nebula"
+QUERY = "Pattern"
 download_dir = Path("src/bg")
 download_dir.mkdir(exist_ok=True)
 
@@ -19,11 +19,11 @@ def download(url, dest_path):
                 if chunk:
                     f.write(chunk)
 
-def get_one_random_video():
-    url = "https://api.pexels.com/videos/search"
+def get_img():
+    url = "https://api.pexels.com/v1/search"
     params = {
         "query": QUERY,
-        "per_page": 20,   # ขอมาเยอะหน่อยเพื่อสุ่ม
+        "per_page": 20,
         "orientation": "portrait"
     }
     headers = {"Authorization": API_KEY}
@@ -32,20 +32,19 @@ def get_one_random_video():
     res.raise_for_status()
     data = res.json()
 
-    videos = data.get("videos", [])
-    if not videos:
-        print("❌ No videos found")
+    images = data.get("photos", [])
+    if not images:
+        print("❌ No images found")
         return None
 
-    # สุ่มเลือกคลิป
-    vid = random.choice(videos)
+    # randomly select one image
+    img = random.choice(images)
 
-    # หาไฟล์ที่ความละเอียดสูงสุด
-    best_file = max(vid["video_files"], key=lambda f: f.get("width", 0))
-    video_url = best_file["link"]
+    # find better resolution
+    img_url = img["src"]["original"]
 
-    dest_path = download_dir / f"background.mp4"
-    download(video_url, dest_path)
+    dest_path = download_dir / f"background.jpg"
+    download(img_url, dest_path)
     print(f"✅ Downloaded: {dest_path}")
     return dest_path
 
@@ -53,4 +52,4 @@ if __name__ == "__main__":
     if not API_KEY:
         print("❌ Missing API key. Set PEXELS_API in .env")
     else:
-        get_one_random_video()
+        get_img()
