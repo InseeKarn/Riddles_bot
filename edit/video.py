@@ -1,7 +1,7 @@
 from moviepy.editor import *
 from gtts import gTTS
-from riddles_gen import get_data # Use to test on local
-# from .riddles_gen import get_data # Use to run on Github workflows
+# from riddles_gen import get_data # Use to test on local
+from .riddles_gen import get_data # Use to run on Github workflows
 
 import numpy as np
 import moviepy.video.fx.all as afx
@@ -33,7 +33,7 @@ def create_clip(hook, bg_path, music_file_path, answer=None):
         clips = []
         
         # create blank clip for start_time
-        blank_clip = ColorClip(size=(950, 200), color=(255,255,255), duration=start_time)
+        blank_clip = ColorClip(size=(800, 200), color=(255,255,255), duration=start_time)
         blank_clip = blank_clip.set_position(("center", 330))
         
         for i in range(len(hook)):
@@ -44,7 +44,7 @@ def create_clip(hook, bg_path, music_file_path, answer=None):
                 fontsize=fontsize,
                 font=font,
                 color=color,
-                size=(950, None),
+                size=(800, None),
                 method='caption'
             )
             
@@ -57,7 +57,7 @@ def create_clip(hook, bg_path, music_file_path, answer=None):
             fontsize=fontsize,
             font=font,
             color=color,
-            size=(950, None),
+            size=(800, None),
             method='caption'
         ).set_position(("center", 230))
         
@@ -89,11 +89,21 @@ def create_clip(hook, bg_path, music_file_path, answer=None):
 
     gif_h = 350
 
+    gif_folder = "src/gifs/"
+    gif_files = [f for f in os.listdir(gif_folder) if f.endswith(".gif")]
+
+    random_gif = os.path.join(gif_folder, random.choice(gif_files))
+
     # --- GIF ---
-    gif_think = VideoFileClip("src/gifs/thinking.gif").set_start(gif_start_time).set_duration(3).resize(height=gif_h)
+    gif_think = (
+        VideoFileClip(random_gif)
+        .resize(height=gif_h)
+        .loop(duration=3)   # วนจนกว่าจะครบเวลาที่กำหนด
+        .set_start(gif_start_time)
+    )
 
     # --- Background box ---
-    box_bg = ColorClip(size=(950, 1400), color=(255,255,255)).set_duration(end_time)
+    box_bg = ColorClip(size=(850, 1400), color=(255,255,255)).set_duration(end_time)
         
     # --- Background ---
     bg = ImageClip(bg_path).resize((1080, 1920))
@@ -126,8 +136,8 @@ def create_clip(hook, bg_path, music_file_path, answer=None):
             color='red',
             stroke_color='black',
             stroke_width=3,
-            method='label',
-            size=(900, 500)
+            method='caption',
+            size=(700, 500)
         )
         .set_start(answer_start_time)
         .set_duration(answer_duration)

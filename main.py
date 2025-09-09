@@ -1,7 +1,7 @@
 # Dev by InseeKarn
 
 from edit.images import get_img
-from edit.video import build_quiz_clip
+from edit.video import build_clip
 from youtube.upload import run_upload
 from notify.discord import discord_message
 from dotenv import load_dotenv
@@ -19,7 +19,7 @@ if __name__ == "__main__":
         video_path = get_img()
         if video_path:
             print("🖼️ Videos step pass")
-            build_quiz_clip()
+            build_clip()
             print("🎬 Video edited")
             video_url = run_upload()
             if video_url:
