@@ -60,7 +60,11 @@ def upload_video(file_path, title, description,
         "snippet": {
             "title": title,
             "description": description,
-            "categoryId": category
+            "categoryId": category,
+            "tags": [
+                "riddles", "quiz", "iqtest", "challenge", "fyp", "shorts", "viral",
+                "brain", "fun", "mind", "logic", "game", "thinking", "entertainment"
+            ]
         },
         "status": {
             "privacyStatus": privacy
@@ -86,21 +90,34 @@ def upload_video(file_path, title, description,
 
     # print(youtube_api)
 def run_upload():
-    raw_title = """riddles #quiz #iqtest #challenge #fyp #shorts #vira'"""
+    raw_title = ["🧠 Can you solve? Brain Teaser Challenge 🎯",
+                 "🤔 IQ Test Puzzle Fun Quiz 🕹️",
+                 "🧩 Mind Game Riddles Shorts ⚡",
+                 "🧠 Trivia Puzzle Brain Teaser Quiz 🎲",
+                 "⏱️ Think fast! Logic Puzzle Challenge 🏆"
+                ]
 
-    
-    clean_title = " ".join(raw_title.split())
-    # x <= 100 ตัว
-    clean_title = clean_title[:100]
+    random_index = os.urandom(1)[0] % len(raw_title)
+
+    selected_title = raw_title[random_index]
+
+    clean_title = " ".join(selected_title.split())
+
+    raw_description = [
+        "🧠 Test your brain with fun riddles and challenging questions! #Shorts",
+        "🤔 Can you solve them all? Try now! #Shorts",
+        "🕹️ Enjoy short brain-teasing games and puzzles! #Shorts",
+        "🎯 Challenge your friends to see if they can solve them too! #Shorts",
+        "⏱️ Focus and think fast to beat the puzzles! #Shorts"
+    ]
+    random_desc_index = os.urandom(1)[0] % len(raw_description)
+    clean_description = raw_description[random_desc_index]
 
     file_path = "src/outputs/quiz_shorts.mp4"
     video_url = upload_video(
         file_path= file_path,
         title=clean_title,
-        description="""#riddles #riddlegame #quiztime #funquiz #puzzletime
-        #brainteaser #mindgames #quizchallenge #trivia #logicpuzzle
-        #fyp #shorts #viral #challenge #fun
-        """
+        description=clean_description
     )
 
     # 🆕 Delete after uploaded
